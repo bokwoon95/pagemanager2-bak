@@ -1,5 +1,5 @@
 @media screen and (max-height: 550px) {
-  .center-form {
+  .center-form-container {
     padding: 20px 0;
   }
 }
@@ -8,12 +8,12 @@
   background-color: #f1f1f1;
 }
 
-.center-form, #signup {
+.center-form-container, #signup {
   width: 320px;
   margin: auto;
 }
 
-#loginform, #signupform {
+#loginform, #signupform, .center-form {
   margin-top: 20px;
   margin-left: 0;
   padding: 26px 24px 46px;

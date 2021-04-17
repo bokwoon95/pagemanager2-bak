@@ -15,27 +15,30 @@ type superadminSetupData struct {
 }
 
 func (d *superadminSetupData) setupForm(form *hyforms.Form) {
-	const passwordNotMatch = "password does not match"
+	const passwordNotMatch = "passwords do not match"
 	password := form.
 		Input("password", "pm-password", d.Password).
-		Set("", hy.Attr{"required": hy.Enabled})
+		Set("#pm-password.bg-near-white.pa2.w-100", hy.Attr{"required": hy.Enabled})
 	confirmPassword := form.
 		Input("password", "pm-confirm-password", d.ConfirmPassword).
-		Set("", hy.Attr{"required": hy.Enabled})
+		Set("#pm-confirm-password.bg-near-white.pa2.w-100", hy.Attr{"required": hy.Enabled})
 
-	form.Set(".bg-white", hy.Attr{"method": "POST"})
-	form.Append("div", nil, hy.Txt("To make changes to your website, you need to create a Superadmin account"))
-	form.Append("div.mv2.pt2", nil, hy.H("label.pointer", hy.Attr{"for": password.ID()}, hy.Txt("Password:")))
+	form.Set(".bg-white.center-form", hy.Attr{"method": "POST"})
+	form.Append("div.f4", nil,
+		hy.Txt("To make changes to your website, you need to create a Superadmin account"))
+	form.Append("div.mt2.mb1.pt2", nil,
+		hy.H("label.pointer", hy.Attr{"for": password.ID()}, hy.Txt("Superadmin Password:")))
 	form.Append("div", nil, password)
 	if hyforms.ErrMsgsMatch(password.ErrMsgs(), hyforms.RequiredErrMsg) {
 		form.Append("div.f7.red", nil, hy.Txt(hyforms.RequiredErrMsg))
 	}
-	form.Append("div.mv2.pt2", nil, hy.H("label.pointer", hy.Attr{"for": confirmPassword.ID()}, hy.Txt("Confirm Password:")))
+	form.Append("div.mt2.mb1.pt2", nil,
+		hy.H("label.pointer", hy.Attr{"for": confirmPassword.ID()}, hy.Txt("Confirm Superadmin Password:")))
 	form.Append("div", nil, confirmPassword)
 	if hyforms.ErrMsgsMatch(confirmPassword.ErrMsgs(), passwordNotMatch) {
 		form.Append("div.f7.red", nil, hy.Txt(passwordNotMatch))
 	}
-	form.Append("div.mv2.pt2", nil, hy.H("button.pointer", hy.Attr{"type": "submit"}, hy.Txt("Create Superadmin")))
+	form.Append("div.mv2.pt2", nil, hy.H("button.pointer.pa2", hy.Attr{"type": "submit"}, hy.Txt("Create Superadmin")))
 
 	form.Unmarshal(func() {
 		d.Password = password.Validate(hyforms.Required).Value()
@@ -53,8 +56,8 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		templateData := templates.CenterForm{
-			Title:  "Superadmin Setup",
-			Header: "Superadmin Setup",
+			Title:  "PageManager Setup",
+			Header: "PageManager Setup",
 		}
 		_ = hyforms.CookiePop(w, r, setupForm, data)
 		templateData.Form, err = hyforms.MarshalForm(nil, w, r, data.setupForm)
