@@ -1,4 +1,4 @@
-package derivekey
+package keyderiv
 
 import (
 	"encoding/hex"

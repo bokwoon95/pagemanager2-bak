@@ -17,14 +17,14 @@ import (
 	"github.com/bokwoon95/pagemanager/hy"
 )
 
-type ValidationError struct {
+type ValidationErrMsgs struct {
 	FormErrMsgs  []string
 	InputErrMsgs map[string][]string
 	Expires      time.Time
 }
 
-func (e ValidationError) Error() string {
-	return fmt.Sprintf("form errors: %+v, input errors: %+v", e.FormErrMsgs, e.InputErrMsgs)
+func (errMsgs ValidationErrMsgs) IsNonEmpty() bool {
+	return len(errMsgs.FormErrMsgs) > 0 || len(errMsgs.InputErrMsgs) > 0
 }
 
 type Hyforms struct {
@@ -60,7 +60,7 @@ func (hyf *Hyforms) MarshalForm(s hy.Sanitizer, w http.ResponseWriter, r *http.R
 		if err != nil {
 			return
 		}
-		validationErr := ValidationError{}
+		validationErr := ValidationErrMsgs{}
 		err = gob.NewDecoder(bytes.NewReader(b)).Decode(&validationErr)
 		if err != nil {
 			return
@@ -82,8 +82,9 @@ func (hyf *Hyforms) MarshalForm(s hy.Sanitizer, w http.ResponseWriter, r *http.R
 	return output, nil
 }
 
-func (hyf *Hyforms) UnmarshalForm(w http.ResponseWriter, r *http.Request, fn func(*Form)) error {
+func (hyf *Hyforms) UnmarshalForm(w http.ResponseWriter, r *http.Request, fn func(*Form)) ValidationErrMsgs {
 	r.ParseForm()
+	errMsgs := ValidationErrMsgs{InputErrMsgs: make(map[string][]string)}
 	form := &Form{
 		mode:         FormModeUnmarshal,
 		request:      r,
@@ -92,28 +93,36 @@ func (hyf *Hyforms) UnmarshalForm(w http.ResponseWriter, r *http.Request, fn fun
 	}
 	fn(form)
 	if len(form.formErrMsgs) > 0 || len(form.inputErrMsgs) > 0 {
-		validationErr := ValidationError{
-			FormErrMsgs:  form.formErrMsgs,
-			InputErrMsgs: form.inputErrMsgs,
-			Expires:      time.Now().Add(5 * time.Second),
+		errMsgs.FormErrMsgs = form.formErrMsgs
+		for name, msgs := range form.inputErrMsgs {
+			errMsgs.InputErrMsgs[name] = msgs
 		}
-		buf := &bytes.Buffer{}
-		err := gob.NewEncoder(buf).Encode(validationErr)
-		if err != nil {
-			return fmt.Errorf("%w: failed gob encoding %s", validationErr, err.Error())
-		}
-		value, err := hyf.box.Base64Hash(buf.Bytes())
-		if err != nil {
-			return erro.Wrap(err)
-		}
-		http.SetCookie(w, &http.Cookie{
-			Name:   "hyforms.ValidationError",
-			Value:  string(value),
-			MaxAge: 5,
-		})
-		return validationErr
 	}
+	return errMsgs
+}
+
+func (hyf *Hyforms) Redirect(w http.ResponseWriter, r *http.Request, url string, errMsgs ValidationErrMsgs) error {
+	defer http.Redirect(w, r, url, http.StatusMovedPermanently)
+	errMsgs.Expires = time.Now().Add(10 * time.Second)
+	buf := &bytes.Buffer{}
+	err := gob.NewEncoder(buf).Encode(errMsgs)
+	if err != nil {
+		return fmt.Errorf("%+v: failed gob encoding %s", errMsgs, err.Error())
+	}
+	value, err := hyf.box.Base64Hash(buf.Bytes())
+	if err != nil {
+		return erro.Wrap(err)
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:   "hyforms.ValidationError",
+		Value:  string(value),
+		MaxAge: 5,
+	})
 	return nil
+}
+
+func Redirect(w http.ResponseWriter, r *http.Request, url string, errMsgs ValidationErrMsgs) error {
+	return defaultHyforms.Redirect(w, r, url, errMsgs)
 }
 
 func (hyf *Hyforms) CookieSet(w http.ResponseWriter, cookieName string, value interface{}, cookieTemplate *http.Cookie) error {
@@ -182,7 +191,7 @@ func MarshalForm(s hy.Sanitizer, w http.ResponseWriter, r *http.Request, fn func
 	return defaultHyforms.MarshalForm(s, w, r, fn)
 }
 
-func UnmarshalForm(w http.ResponseWriter, r *http.Request, fn func(*Form)) error {
+func UnmarshalForm(w http.ResponseWriter, r *http.Request, fn func(*Form)) ValidationErrMsgs {
 	return defaultHyforms.UnmarshalForm(w, r, fn)
 }
 

@@ -2,13 +2,12 @@ package pagemanager
 
 import (
 	"crypto/rand"
-	"errors"
 	"net/http"
 	"sync/atomic"
 	"time"
 
 	"github.com/bokwoon95/erro"
-	"github.com/bokwoon95/pagemanager/derivekey"
+	"github.com/bokwoon95/pagemanager/keyderiv"
 	"github.com/bokwoon95/pagemanager/encrypthash"
 	"github.com/bokwoon95/pagemanager/hy"
 	"github.com/bokwoon95/pagemanager/hyforms"
@@ -79,21 +78,18 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "POST":
-		err := hyforms.UnmarshalForm(w, r, data.setupForm)
+		errMsgs := hyforms.UnmarshalForm(w, r, data.setupForm)
 		if err != nil {
-			if errors.As(err, &hyforms.ValidationError{}) {
-				_ = hyforms.CookieSet(w, setupForm, *data, nil)
-				http.Redirect(w, r, r.URL.Path, http.StatusMovedPermanently)
-			}
-			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			_ = hyforms.CookieSet(w, setupForm, *data, nil)
+			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
 			return
 		}
-		passwordHash, err := derivekey.GenerateFromPassword([]byte(data.Password))
+		passwordHash, err := keyderiv.GenerateFromPassword([]byte(data.Password))
 		if err != nil {
 			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
 			return
 		}
-		params, err := derivekey.NewParams()
+		params, err := keyderiv.NewParams()
 		key := params.DeriveKey([]byte(data.Password))
 		pm.privateBox, err = encrypthash.New(key, nil, nil)
 		if err != nil {

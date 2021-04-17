@@ -104,18 +104,6 @@ func New() (*PageManager, error) {
 	if err != nil {
 		return pm, erro.Wrap(err)
 	}
-	// encrypthashkey, err := deriveKeyFromPassword(superadminpassword)
-	// if err != nil {
-	// 	return pm, erro.Wrap(err)
-	// }
-	// pm.privateBox, err = encrypthash.New(encrypthashkey.key, nil, nil)
-	// if err != nil {
-	// 	return pm, erro.Wrap(err)
-	// }
-	// pm.publicBox, err = encrypthash.New(nil, pm.getKeys, pm.privateBox.Base64Decrypt)
-	// if err != nil {
-	// 	return pm, erro.Wrap(err)
-	// }
 	return pm, nil
 }
 
@@ -139,6 +127,9 @@ func (pm *PageManager) getKeys() (keys [][]byte, err error) {
 }
 
 func (pm *PageManager) PageManager(next http.Handler) http.Handler {
+	mux := http.NewServeMux()
+	mux.Handle("/", next)
+	mux.HandleFunc("/pm-superadmin-login", pm.superadminLogin)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/pm-themes/") ||
 			strings.HasPrefix(r.URL.Path, "/pm-images/") ||
@@ -160,7 +151,7 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 			pm.superadminSetup(w, r)
 			return
 		}
-		next.ServeHTTP(w, r)
+		mux.ServeHTTP(w, r)
 	})
 }
 
