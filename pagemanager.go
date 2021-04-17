@@ -130,6 +130,7 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/", next)
 	mux.HandleFunc("/pm-superadmin-login", pm.superadminLogin)
+	mux.HandleFunc("/pm-test-encrypt", pm.testEncrypt)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/pm-themes/") ||
 			strings.HasPrefix(r.URL.Path, "/pm-images/") ||
@@ -255,4 +256,66 @@ func executeTemplates(w http.ResponseWriter, data interface{}, fsys fs.FS, file 
 	}
 	buf.WriteTo(w)
 	return nil
+}
+
+func (pm *PageManager) testEncrypt(w http.ResponseWriter, r *http.Request) {
+	const secret = "secret"
+	if atomic.LoadInt32(&pm.privateBoxFlag) == 0 {
+		io.WriteString(w, "not yet loaded")
+		return
+	}
+	// privateBox
+	b, err := pm.privateBox.Base64Encrypt([]byte(secret))
+	if err != nil {
+		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("privateBox encrypted:", string(b))
+	b, err = pm.privateBox.Base64Decrypt(b)
+	if err != nil {
+		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("privateBox decrypted:", string(b))
+	b, err = pm.privateBox.Base64Hash([]byte(secret))
+	if err != nil {
+		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("privateBox hashedmsg:", string(b))
+	b, err = pm.privateBox.Base64VerifyHash(b)
+	if err != nil {
+		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("privateBox msg:", string(b))
+	// publicBox
+	if pm.publicBox == nil {
+		io.WriteString(w, "publicBox is nil")
+		return
+	}
+	b, err = pm.publicBox.Base64Encrypt([]byte(secret))
+	if err != nil {
+		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("publicBox encrypted:", string(b))
+	b, err = pm.publicBox.Base64Decrypt(b)
+	if err != nil {
+		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("publicBox decrypted:", string(b))
+	b, err = pm.publicBox.Base64Hash([]byte(secret))
+	if err != nil {
+		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("publicBox hashedmsg:", string(b))
+	b, err = pm.publicBox.Base64VerifyHash(b)
+	if err != nil {
+		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("publicBox msg:", string(b))
 }

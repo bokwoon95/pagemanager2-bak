@@ -104,6 +104,12 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
 			return
 		}
+		pm.publicBox, err = encrypthash.New(nil, pm.getKeys, pm.privateBox.Base64Decrypt)
+		if err != nil {
+			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, erro.Wrap(err).Error())
+			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
+			return
+		}
 		atomic.StoreInt32(&pm.privateBoxFlag, 1)
 		http.Redirect(w, r, "/", http.StatusMovedPermanently)
 	default:
