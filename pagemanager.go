@@ -270,25 +270,25 @@ func (pm *PageManager) testEncrypt(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Println("privateBox encrypted:", string(b))
+	io.WriteString(w, "privateBox encrypted: "+string(b)+"\n")
 	b, err = pm.privateBox.Base64Decrypt(b)
 	if err != nil {
 		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Println("privateBox decrypted:", string(b))
+	io.WriteString(w, "privateBox decrypted: "+string(b)+"\n")
 	b, err = pm.privateBox.Base64Hash([]byte(secret))
 	if err != nil {
 		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Println("privateBox hashedmsg:", string(b))
+	io.WriteString(w, "privateBox hashedmsg: "+string(b)+"\n")
 	b, err = pm.privateBox.Base64VerifyHash(b)
 	if err != nil {
 		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Println("privateBox msg:", string(b))
+	io.WriteString(w, "privateBox msg: "+string(b)+"\n")
 	// publicBox
 	if pm.publicBox == nil {
 		io.WriteString(w, "publicBox is nil")
@@ -299,23 +299,24 @@ func (pm *PageManager) testEncrypt(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Println("publicBox encrypted:", string(b))
+	io.WriteString(w, "publicBox encrypted: "+string(b)+"\n")
 	b, err = pm.publicBox.Base64Decrypt(b)
 	if err != nil {
 		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Println("publicBox decrypted:", string(b))
+	io.WriteString(w, "publicBox decrypted: "+string(b)+"\n")
 	b, err = pm.publicBox.Base64Hash([]byte(secret))
 	if err != nil {
 		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Println("publicBox hashedmsg:", string(b))
+	io.WriteString(w, "publicBox hashedmsg: "+string(b)+"\n")
 	b, err = pm.publicBox.Base64VerifyHash(b)
 	if err != nil {
 		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Println("publicBox msg:", string(b))
+	io.WriteString(w, "publicBox msg: "+string(b)+"\n")
+	io.WriteString(w, "success\n")
 }
