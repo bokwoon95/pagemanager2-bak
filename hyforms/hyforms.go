@@ -23,7 +23,7 @@ type ValidationError struct {
 	Expires      time.Time
 }
 
-func (e *ValidationError) Error() string {
+func (e ValidationError) Error() string {
 	return fmt.Sprintf("form errors: %+v, input errors: %+v", e.FormErrMsgs, e.InputErrMsgs)
 }
 
@@ -60,8 +60,8 @@ func (hyf *Hyforms) MarshalForm(s hy.Sanitizer, w http.ResponseWriter, r *http.R
 		if err != nil {
 			return
 		}
-		validationErr := &ValidationError{}
-		err = gob.NewDecoder(bytes.NewReader(b)).Decode(validationErr)
+		validationErr := ValidationError{}
+		err = gob.NewDecoder(bytes.NewReader(b)).Decode(&validationErr)
 		if err != nil {
 			return
 		}
@@ -100,7 +100,7 @@ func (hyf *Hyforms) UnmarshalForm(w http.ResponseWriter, r *http.Request, fn fun
 		buf := &bytes.Buffer{}
 		err := gob.NewEncoder(buf).Encode(validationErr)
 		if err != nil {
-			return fmt.Errorf("%w: failed gob encoding %s", &validationErr, err.Error())
+			return fmt.Errorf("%w: failed gob encoding %s", validationErr, err.Error())
 		}
 		value, err := hyf.box.Base64Hash(buf.Bytes())
 		if err != nil {
@@ -111,7 +111,7 @@ func (hyf *Hyforms) UnmarshalForm(w http.ResponseWriter, r *http.Request, fn fun
 			Value:  string(value),
 			MaxAge: 5,
 		})
-		return &validationErr
+		return validationErr
 	}
 	return nil
 }

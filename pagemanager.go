@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"io/fs"
@@ -14,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/bokwoon95/erro"
 	"github.com/bokwoon95/pagemanager/encrypthash"
@@ -25,8 +27,9 @@ import (
 const superadminpassword = "lorem ipsum dolor sit amet"
 
 type PageManager struct {
-	*encrypthash.Blackbox
-	box                 *encrypthash.Blackbox
+	publicBox           *encrypthash.Blackbox
+	privateBox          *encrypthash.Blackbox
+	privateBoxFlag      int32
 	themesMutex         *sync.RWMutex
 	themes              map[string]theme
 	fallbackAssetsIndex map[string]string // asset => theme name
@@ -101,22 +104,25 @@ func New() (*PageManager, error) {
 	if err != nil {
 		return pm, erro.Wrap(err)
 	}
-	encrypthashkey, err := deriveKeyFromPassword(superadminpassword)
-	if err != nil {
-		return pm, erro.Wrap(err)
-	}
-	pm.box, err = encrypthash.New(encrypthashkey.key, nil, nil)
-	if err != nil {
-		return pm, erro.Wrap(err)
-	}
-	pm.Blackbox, err = encrypthash.New(nil, pm.getKeys, pm.box.Base64Decrypt)
-	if err != nil {
-		return pm, erro.Wrap(err)
-	}
+	// encrypthashkey, err := deriveKeyFromPassword(superadminpassword)
+	// if err != nil {
+	// 	return pm, erro.Wrap(err)
+	// }
+	// pm.privateBox, err = encrypthash.New(encrypthashkey.key, nil, nil)
+	// if err != nil {
+	// 	return pm, erro.Wrap(err)
+	// }
+	// pm.publicBox, err = encrypthash.New(nil, pm.getKeys, pm.privateBox.Base64Decrypt)
+	// if err != nil {
+	// 	return pm, erro.Wrap(err)
+	// }
 	return pm, nil
 }
 
 func (pm *PageManager) getKeys() (keys [][]byte, err error) {
+	if atomic.LoadInt32(&pm.privateBoxFlag) == 0 {
+		return nil, erro.Wrap(fmt.Errorf("lacking superadmin password"))
+	}
 	ctx := context.Background()
 	KEYS := tables.NEW_KEYS(ctx, "")
 	_, err = sq.Fetch(pm.superadminDB, sq.SQLite.From(KEYS).OrderBy(KEYS.ORDINAL_NUMBER), func(row *sq.Row) error {
@@ -132,10 +138,6 @@ func (pm *PageManager) getKeys() (keys [][]byte, err error) {
 	return keys, nil
 }
 
-func (pm *PageManager) superadminDBL() sq.DB {
-	return sq.NewDB(pm.superadminDB, sq.DefaultLogger(), sq.Lcompact)
-}
-
 func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/pm-themes/") ||
@@ -145,8 +147,7 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 			return
 		}
 		switch {
-		case *flagSecure: // don't do superadmin check
-		default:
+		case !*flagNoSetup:
 			SUPERADMIN := tables.NEW_SUPERADMIN(r.Context(), "")
 			superadminExists, err := sq.Exists(pm.superadminDB, sq.SQLite.From(SUPERADMIN))
 			if err != nil {
@@ -161,6 +162,10 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (pm *PageManager) superadminDBL() sq.DB {
+	return sq.NewDB(pm.superadminDB, sq.DefaultLogger(), sq.Lcompact)
 }
 
 func (pm *PageManager) serveFile(w http.ResponseWriter, r *http.Request, name string) {

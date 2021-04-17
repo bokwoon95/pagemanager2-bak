@@ -22,7 +22,7 @@ import (
 var (
 	flagDatafolder       = flag.String("pm-datafolder", "", "")
 	flagSuperadminFolder = flag.String("pm-superadmin", "", "")
-	flagSecure           = flag.Bool("pm-secure", false, "")
+	flagNoSetup          = flag.Bool("pm-no-setup", false, "")
 )
 
 var bufpool = sync.Pool{

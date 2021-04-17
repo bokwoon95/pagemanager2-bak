@@ -1,11 +1,19 @@
 package pagemanager
 
 import (
+	"crypto/rand"
+	"errors"
 	"net/http"
+	"sync/atomic"
+	"time"
 
 	"github.com/bokwoon95/erro"
+	"github.com/bokwoon95/pagemanager/derivekey"
+	"github.com/bokwoon95/pagemanager/encrypthash"
 	"github.com/bokwoon95/pagemanager/hy"
 	"github.com/bokwoon95/pagemanager/hyforms"
+	"github.com/bokwoon95/pagemanager/sq"
+	"github.com/bokwoon95/pagemanager/tables"
 	"github.com/bokwoon95/pagemanager/templates"
 )
 
@@ -73,10 +81,71 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		err := hyforms.UnmarshalForm(w, r, data.setupForm)
 		if err != nil {
-			_ = hyforms.CookieSet(w, setupForm, *data, nil)
-			http.Redirect(w, r, r.URL.Path, http.StatusMovedPermanently)
+			if errors.As(err, &hyforms.ValidationError{}) {
+				_ = hyforms.CookieSet(w, setupForm, *data, nil)
+				http.Redirect(w, r, r.URL.Path, http.StatusMovedPermanently)
+			}
+			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
 			return
 		}
+		passwordHash, err := derivekey.GenerateFromPassword([]byte(data.Password))
+		if err != nil {
+			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			return
+		}
+		params, err := derivekey.NewParams()
+		key := params.DeriveKey([]byte(data.Password))
+		pm.privateBox, err = encrypthash.New(key, nil, nil)
+		if err != nil {
+			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			return
+		}
+		atomic.StoreInt32(&pm.privateBoxFlag, 1)
+		SUPERADMIN := tables.NEW_SUPERADMIN(r.Context(), "")
+		_, _, err = sq.Exec(pm.superadminDB, sq.SQLite.
+			InsertInto(SUPERADMIN).
+			Valuesx(func(col *sq.Column) error {
+				col.SetInt(SUPERADMIN.ID, 1)
+				col.SetString(SUPERADMIN.PASSWORD_HASH, string(passwordHash))
+				col.SetString(SUPERADMIN.KEY_PARAMS, params.String())
+				return nil
+			}), 0,
+		)
+		if err != nil {
+			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			return
+		}
+		key = make([]byte, 32)
+		_, err = rand.Read(key)
+		if err != nil {
+			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			return
+		}
+		keyCiphertext, err := pm.privateBox.Base64Encrypt(key)
+		if err != nil {
+			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			return
+		}
+		KEYS := tables.NEW_KEYS(r.Context(), "")
+		_, _, err = sq.Exec(pm.superadminDB, sq.SQLite.DeleteFrom(KEYS), 0)
+		if err != nil {
+			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			return
+		}
+		_, _, err = sq.Exec(pm.superadminDB, sq.SQLite.
+			InsertInto(KEYS).
+			Valuesx(func(col *sq.Column) error {
+				col.SetInt(KEYS.ORDINAL_NUMBER, 1)
+				col.SetString(KEYS.KEY_CIPHERTEXT, string(keyCiphertext))
+				col.SetTime(KEYS.CREATED_AT, time.Now())
+				return nil
+			}), 0,
+		)
+		if err != nil {
+			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			return
+		}
+		http.Redirect(w, r, "/", http.StatusMovedPermanently)
 	default:
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 	}

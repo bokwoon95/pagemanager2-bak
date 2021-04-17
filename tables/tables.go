@@ -10,10 +10,9 @@ type TenantIDKey struct{}
 
 type PM_SUPERADMIN struct {
 	sq.TableInfo
-	ID                        sq.NumberField `sq:"type=INTEGER misc=PRIMARY_KEY"`
-	PASSWORD_HASH             sq.StringField
-	ENCRYPTION_KEY_PARAMETERS sq.StringField
-	MAC_KEY_PARAMETERS        sq.StringField
+	ID            sq.NumberField `sq:"type=INTEGER misc=PRIMARY_KEY"`
+	PASSWORD_HASH sq.StringField
+	KEY_PARAMS    sq.StringField
 }
 
 func NEW_SUPERADMIN(ctx context.Context, alias string) PM_SUPERADMIN {
@@ -29,7 +28,7 @@ func NEW_SUPERADMIN(ctx context.Context, alias string) PM_SUPERADMIN {
 
 type PM_KEYS struct {
 	sq.TableInfo
-	ORDINAL_NUMBER sq.StringField
+	ORDINAL_NUMBER sq.NumberField
 	KEY_CIPHERTEXT sq.StringField
 	CREATED_AT     sq.TimeField
 }

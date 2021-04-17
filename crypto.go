@@ -91,3 +91,21 @@ func deriveKeyFromPassword(password string) (keyDerivation, error) {
 	kd.key = argon2.IDKey([]byte(password), kd.salt, kd.time, kd.memory, kd.threads, kd.keyLen)
 	return kd, nil
 }
+
+type keyDerivationParams struct {
+	argon2Version int
+	memory        uint32
+	time          uint32
+	threads       uint8
+	keyLen        uint32
+	salt          []byte
+}
+
+func (kd keyDerivationParams) deriveKey() {
+}
+
+func generateFromPassword() {
+}
+
+func compareHashAndPassword() {
+}
