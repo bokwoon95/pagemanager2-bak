@@ -1,3 +1,4 @@
+// testutil implements simple test helpers.
 package testutil
 
 import (

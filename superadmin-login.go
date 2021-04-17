@@ -98,13 +98,13 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		key := params.DeriveKey([]byte(data.Password))
-		pm.privateBox, err = encrypthash.New(key, nil, nil)
+		pm.privateBox, err = encrypthash.NewStaticKey(key)
 		if err != nil {
 			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, erro.Wrap(err).Error())
 			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
 			return
 		}
-		pm.publicBox, err = encrypthash.New(nil, pm.getKeys, pm.privateBox.Base64Decrypt)
+		pm.publicBox, err = encrypthash.NewRotatingKeys(pm.getKeys, pm.privateBox.Base64Decrypt)
 		if err != nil {
 			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, erro.Wrap(err).Error())
 			hyforms.Redirect(w, r, r.URL.Path, errMsgs)

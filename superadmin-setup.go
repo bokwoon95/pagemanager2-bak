@@ -93,7 +93,7 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 		}
 		params, err := keyderiv.NewParams()
 		key := params.DeriveKey([]byte(data.Password))
-		pm.privateBox, err = encrypthash.New(key, nil, nil)
+		pm.privateBox, err = encrypthash.NewStaticKey(key)
 		if err != nil {
 			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
 			return

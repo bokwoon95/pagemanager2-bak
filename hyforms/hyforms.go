@@ -1,3 +1,4 @@
+// Package hyforms is a form rendering and validation library for Go.
 package hyforms
 
 import (
@@ -28,7 +29,7 @@ func (errMsgs ValidationErrMsgs) IsNonEmpty() bool {
 }
 
 type Hyforms struct {
-	box *encrypthash.Blackbox
+	box encrypthash.Box
 }
 
 var defaultHyforms = func() *Hyforms {
@@ -37,7 +38,7 @@ var defaultHyforms = func() *Hyforms {
 	if err != nil {
 		panic(err)
 	}
-	box, err := encrypthash.New(key, nil, nil)
+	box, err := encrypthash.NewStaticKey(key)
 	if err != nil {
 		panic(err)
 	}

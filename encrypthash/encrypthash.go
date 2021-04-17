@@ -1,3 +1,4 @@
+// Package encrypthash encrypts and hashes given a static key (or a set of rotating keys).
 package encrypthash
 
 import (
@@ -11,33 +12,27 @@ import (
 	"golang.org/x/crypto/nacl/secretbox"
 )
 
-type Encrypter interface {
-	Encrypt(plaintext []byte) (ciphertext []byte, err error)
-	Decrypt(ciphertext []byte) (plaintext []byte, err error)
-}
-
-type Hasher interface {
-	Hash(data []byte) (hash []byte, err error)
-	VerifyHash(data []byte, hash []byte) error
-}
-
-type Blackbox struct {
+type Box struct {
 	key        []byte
 	getKeys    func() (keys [][]byte, err error)
-	processKey func(input []byte) (output []byte, err error)
+	processKey func(keyIn []byte) (keyOut []byte, err error)
 }
 
-var _ Encrypter = &Blackbox{}
-var _ Hasher = &Blackbox{}
-
-func New(key []byte, getKeys func() (keys [][]byte, err error), processKey func(input []byte) (output []byte, err error)) (*Blackbox, error) {
-	if len(key) == 0 && getKeys == nil {
-		return nil, erro.Wrap(fmt.Errorf("Either keys or getKeys function must be non-nil"))
+func NewStaticKey(key []byte) (Box, error) {
+	if len(key) == 0 {
+		return Box{}, fmt.Errorf("key length cannot be 0")
 	}
-	return &Blackbox{key: key, getKeys: getKeys}, nil
+	return Box{key: key}, nil
 }
 
-func (box *Blackbox) Encrypt(plaintext []byte) (ciphertext []byte, err error) {
+func NewRotatingKeys(getKeys func() (keys [][]byte, err error), processKey func(keyIn []byte) (keyOut []byte, err error)) (Box, error) {
+	if getKeys == nil {
+		return Box{}, fmt.Errorf("getKeys function cannot be nil")
+	}
+	return Box{getKeys: getKeys, processKey: processKey}, nil
+}
+
+func (box Box) Encrypt(plaintext []byte) (ciphertext []byte, err error) {
 	const nonceSize = 24
 	var key []byte
 	if box.getKeys != nil {
@@ -73,7 +68,7 @@ func (box *Blackbox) Encrypt(plaintext []byte) (ciphertext []byte, err error) {
 	return ciphertext, nil
 }
 
-func (box *Blackbox) Decrypt(ciphertext []byte) (plaintext []byte, err error) {
+func (box Box) Decrypt(ciphertext []byte) (plaintext []byte, err error) {
 	const nonceSize = 24
 	var keys [][]byte
 	if box.getKeys != nil {
@@ -111,7 +106,7 @@ func (box *Blackbox) Decrypt(ciphertext []byte) (plaintext []byte, err error) {
 	return nil, erro.Wrap(fmt.Errorf("decryption error"))
 }
 
-func (box *Blackbox) Hash(msg []byte) (hash []byte, err error) {
+func (box Box) Hash(msg []byte) (hash []byte, err error) {
 	var key []byte
 	if box.getKeys != nil {
 		var keys [][]byte
@@ -144,7 +139,7 @@ func (box *Blackbox) Hash(msg []byte) (hash []byte, err error) {
 	return sum, nil
 }
 
-func (box *Blackbox) VerifyHash(msg []byte, hash []byte) error {
+func (box Box) VerifyHash(msg []byte, hash []byte) error {
 	var err error
 	var keys [][]byte
 	if box.getKeys != nil {
@@ -181,7 +176,7 @@ func (box *Blackbox) VerifyHash(msg []byte, hash []byte) error {
 	return erro.Wrap(fmt.Errorf("hash not valid"))
 }
 
-func (box *Blackbox) Base64Encrypt(plaintext []byte) (b64Ciphertext []byte, err error) {
+func (box Box) Base64Encrypt(plaintext []byte) (b64Ciphertext []byte, err error) {
 	ciphertext, err := box.Encrypt(plaintext)
 	if err != nil {
 		return nil, erro.Wrap(err)
@@ -191,7 +186,7 @@ func (box *Blackbox) Base64Encrypt(plaintext []byte) (b64Ciphertext []byte, err 
 	return b64Ciphertext, nil
 }
 
-func (box *Blackbox) Base64Decrypt(b64Ciphertext []byte) (plaintext []byte, err error) {
+func (box Box) Base64Decrypt(b64Ciphertext []byte) (plaintext []byte, err error) {
 	ciphertext := make([]byte, base64.RawURLEncoding.DecodedLen(len(b64Ciphertext)))
 	n, err := base64.RawURLEncoding.Decode(ciphertext, b64Ciphertext)
 	if err != nil {
@@ -205,7 +200,7 @@ func (box *Blackbox) Base64Decrypt(b64Ciphertext []byte) (plaintext []byte, err 
 	return plaintext, nil
 }
 
-func (box *Blackbox) Base64Hash(msg []byte) (b64HashedMsg []byte, err error) {
+func (box Box) Base64Hash(msg []byte) (b64HashedMsg []byte, err error) {
 	hash, err := box.Hash(msg)
 	if err != nil {
 		return nil, erro.Wrap(err)
@@ -220,7 +215,7 @@ func (box *Blackbox) Base64Hash(msg []byte) (b64HashedMsg []byte, err error) {
 	return b64HashedMsg, nil
 }
 
-func (box *Blackbox) Base64VerifyHash(b64HashedMsg []byte) (msg []byte, err error) {
+func (box Box) Base64VerifyHash(b64HashedMsg []byte) (msg []byte, err error) {
 	dotIndex := -1
 	for i, c := range b64HashedMsg {
 		if c == '.' {

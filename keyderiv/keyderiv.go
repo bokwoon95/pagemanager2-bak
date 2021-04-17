@@ -1,3 +1,4 @@
+// Package keyderiv is a key derivation wrapper around argon2id.
 package keyderiv
 
 import (

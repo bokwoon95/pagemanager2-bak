@@ -1,3 +1,4 @@
+// sq is a type-safe query builder and data mapper for Go.
 package sq
 
 import (

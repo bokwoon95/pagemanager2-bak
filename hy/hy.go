@@ -1,3 +1,4 @@
+// Package hy implements hyperscript in Go.
 package hy
 
 import (

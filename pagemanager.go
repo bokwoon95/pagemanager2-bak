@@ -27,9 +27,9 @@ import (
 const superadminpassword = "lorem ipsum dolor sit amet"
 
 type PageManager struct {
-	publicBox           *encrypthash.Blackbox
-	privateBox          *encrypthash.Blackbox
 	privateBoxFlag      int32
+	privateBox          encrypthash.Box
+	publicBox           encrypthash.Box
 	themesMutex         *sync.RWMutex
 	themes              map[string]theme
 	fallbackAssetsIndex map[string]string // asset => theme name
@@ -290,10 +290,6 @@ func (pm *PageManager) testEncrypt(w http.ResponseWriter, r *http.Request) {
 	}
 	io.WriteString(w, "privateBox msg: "+string(b)+"\n")
 	// publicBox
-	if pm.publicBox == nil {
-		io.WriteString(w, "publicBox is nil")
-		return
-	}
 	b, err = pm.publicBox.Base64Encrypt([]byte(secret))
 	if err != nil {
 		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
