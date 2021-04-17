@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/bokwoon95/erro"
-	"github.com/bokwoon95/pagemanager/keyderiv"
 	"github.com/bokwoon95/pagemanager/encrypthash"
 	"github.com/bokwoon95/pagemanager/hy"
 	"github.com/bokwoon95/pagemanager/hyforms"
+	"github.com/bokwoon95/pagemanager/keyderiv"
 	"github.com/bokwoon95/pagemanager/sq"
 	"github.com/bokwoon95/pagemanager/tables"
 	"github.com/bokwoon95/pagemanager/templates"
@@ -32,7 +32,9 @@ func (d *superadminSetupData) setupForm(form *hyforms.Form) {
 
 	form.Set(".bg-white.center-form", hy.Attr{"method": "POST"})
 	form.Append("div.f4", nil,
-		hy.Txt("To make changes to your website, you need to create a Superadmin account"))
+		hy.Txt("No Superadmin detected."))
+	form.Append("div.f6", nil,
+		hy.Txt("To make changes to your website, you need to create a Superadmin account."))
 	form.Append("div.mt2.mb1.pt2", nil,
 		hy.H("label.pointer", hy.Attr{"for": password.ID()}, hy.Txt("Superadmin Password:")))
 	form.Append("div", nil, password)
@@ -79,8 +81,8 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 		}
 	case "POST":
 		errMsgs := hyforms.UnmarshalForm(w, r, data.setupForm)
-		if err != nil {
-			_ = hyforms.CookieSet(w, setupForm, *data, nil)
+		if errMsgs.IsNonEmpty() {
+			_ = hyforms.CookieSet(w, setupForm, data, nil)
 			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
 			return
 		}
