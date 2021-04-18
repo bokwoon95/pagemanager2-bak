@@ -24,13 +24,13 @@ func (d *superadminLoginData) LoginForm(form *hyforms.Form) {
 			form.Append("div.red", nil, hy.Txt(errMsg))
 		}
 	}
-	form.Append("div.mt2.mb1.pt2", nil,
+	form.Append("div.mt3.mb1", nil,
 		hy.H("label.pointer", hy.Attr{"for": password.ID()}, hy.Txt("Superadmin Password:")))
 	form.Append("div", nil, password)
 	if hyforms.ErrMsgsMatch(password.ErrMsgs(), hyforms.RequiredErrMsg) {
 		form.Append("div.f7.red", nil, hy.Txt(hyforms.RequiredErrMsg))
 	}
-	form.Append("div.mv2.pt2", nil, hy.H("button.pointer.pa2", hy.Attr{"type": "submit"}, hy.Txt("Log In")))
+	form.Append("div.mt3", nil, hy.H("button.pointer.pa2", hy.Attr{"type": "submit"}, hy.Txt("Log In")))
 
 	form.Unmarshal(func() {
 		d.Password = password.Validate(hyforms.Required).Value()
@@ -64,7 +64,7 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 		}
 		err = pm.setSuperadminPassword([]byte(data.Password))
 		if err != nil {
-			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, erro.Wrap(err).Error())
+			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, err.Error())
 			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
 			return
 		}

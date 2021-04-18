@@ -420,11 +420,11 @@ func (pm *PageManager) setSuperadminPassword(password []byte) error {
 		return erro.Wrap(err)
 	}
 	if rowCount == 0 {
-		return erro.Wrap(fmt.Errorf("No superadmin found"))
+		return fmt.Errorf("No superadmin found")
 	}
 	err = keyderiv.CompareHashAndPassword(passwordHash, password)
 	if err != nil {
-		return erro.Wrap(fmt.Errorf("Invalid password"))
+		return fmt.Errorf("Invalid password")
 	}
 	var params keyderiv.Params
 	err = params.UnmarshalBinary(keyParams)
