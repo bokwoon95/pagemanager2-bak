@@ -35,7 +35,7 @@ type Params struct {
 
 func NewParams() (Params, error) {
 	p := Params{
-		Memory:  63 * 1024,
+		Memory:  64 * 1024,
 		Time:    1,
 		Threads: 4,
 		KeyLen:  32,
