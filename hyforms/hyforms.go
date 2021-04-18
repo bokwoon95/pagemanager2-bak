@@ -53,11 +53,11 @@ func (hyf *Hyforms) MarshalForm(s hy.Sanitizer, w http.ResponseWriter, r *http.R
 		inputErrMsgs: make(map[string][]string),
 	}
 	func() {
-		c, _ := r.Cookie("hyforms.ValidationError")
+		c, _ := r.Cookie("hyforms.ValidationErrMsgs")
 		if c == nil {
 			return
 		}
-		defer http.SetCookie(w, &http.Cookie{Name: "hyforms.ValidationError", MaxAge: -1})
+		defer http.SetCookie(w, &http.Cookie{Name: "hyforms.ValidationErrMsgs", MaxAge: -1})
 		b, err := hyf.box.Base64VerifyHash([]byte(c.Value))
 		if err != nil {
 			return
@@ -116,7 +116,7 @@ func (hyf *Hyforms) Redirect(w http.ResponseWriter, r *http.Request, url string,
 		return erro.Wrap(err)
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:   "hyforms.ValidationError",
+		Name:   "hyforms.ValidationErrMsgs",
 		Value:  string(value),
 		MaxAge: 5,
 	})
@@ -154,7 +154,8 @@ func (hyf *Hyforms) CookieSet(w http.ResponseWriter, cookieName string, value in
 	return nil
 }
 
-func (hyf *Hyforms) CookieGet(r *http.Request, cookieName string, dest interface{}) error {
+func (hyf *Hyforms) CookieGet(w http.ResponseWriter, r *http.Request, cookieName string, dest interface{}) error {
+	defer http.SetCookie(w, &http.Cookie{Name: cookieName, MaxAge: -1, Expires: time.Now().Add(-1 * time.Hour)})
 	c, err := r.Cookie(cookieName)
 	if err != nil && !errors.Is(err, http.ErrNoCookie) {
 		return erro.Wrap(err)
@@ -180,15 +181,6 @@ func (hyf *Hyforms) CookieGet(r *http.Request, cookieName string, dest interface
 	return nil
 }
 
-func (hyf *Hyforms) CookiePop(w http.ResponseWriter, r *http.Request, cookieName string, dest interface{}) error {
-	defer http.SetCookie(w, &http.Cookie{Name: cookieName, MaxAge: -1, Expires: time.Now().Add(-1 * time.Hour)})
-	err := hyf.CookieGet(r, cookieName, dest)
-	if err != nil {
-		return erro.Wrap(err)
-	}
-	return nil
-}
-
 func MarshalForm(s hy.Sanitizer, w http.ResponseWriter, r *http.Request, fn func(*Form)) (template.HTML, error) {
 	return defaultHyforms.MarshalForm(s, w, r, fn)
 }
@@ -201,12 +193,8 @@ func CookieSet(w http.ResponseWriter, cookieName string, value interface{}, c *h
 	return defaultHyforms.CookieSet(w, cookieName, value, c)
 }
 
-func CookieGet(r *http.Request, cookieName string, dest interface{}) error {
-	return defaultHyforms.CookieGet(r, cookieName, dest)
-}
-
-func CookiePop(w http.ResponseWriter, r *http.Request, cookieName string, dest interface{}) error {
-	return defaultHyforms.CookiePop(w, r, cookieName, dest)
+func CookieGet(w http.ResponseWriter, r *http.Request, cookieName string, dest interface{}) error {
+	return defaultHyforms.CookieGet(w, r, cookieName, dest)
 }
 
 func caller(skip int) (file string, line int, function string) {

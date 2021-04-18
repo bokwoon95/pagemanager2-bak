@@ -68,7 +68,7 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 			Title:  "PageManager Setup",
 			Header: "PageManager Setup",
 		}
-		_ = hyforms.CookiePop(w, r, setupForm, data)
+		_ = hyforms.CookieGet(w, r, setupForm, data)
 		templateData.Form, err = hyforms.MarshalForm(nil, w, r, data.setupForm)
 		if err != nil {
 			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
