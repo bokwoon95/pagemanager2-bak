@@ -276,7 +276,7 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 		username    string
 		authzgroups []string
 	}{
-		{0, "", "", []string{"pm-pagemanager"}},
+		{1, "", "", []string{"pm-pagemanager"}},
 	}
 	_, _, err = sq.Exec(db, sq.SQLite.
 		InsertInto(u).

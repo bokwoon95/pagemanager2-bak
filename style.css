@@ -14,9 +14,9 @@
 }
 
 #loginform, #signupform, .center-form {
-  margin-top: 20px;
+  /* margin-top: 20px; */ /* The h1 element already provides a margin */
   margin-left: 0;
-  padding: 26px 24px 46px;
+  padding: 26px 24px 36px;
   border: 1px solid #ccd0d4;
   box-shadow: 0 1px 3px rgb(0 0 0 / 4%);
 }
