@@ -24,10 +24,6 @@ type ValidationErrMsgs struct {
 	Expires      time.Time
 }
 
-func (errMsgs ValidationErrMsgs) IsNonEmpty() bool {
-	return len(errMsgs.FormErrMsgs) > 0 || len(errMsgs.InputErrMsgs) > 0
-}
-
 var box encrypthash.Box = func() encrypthash.Box {
 	key := make([]byte, 24)
 	_, err := rand.Read(key)
@@ -79,9 +75,9 @@ func MarshalForm(s hy.Sanitizer, w http.ResponseWriter, r *http.Request, fn func
 	return output, nil
 }
 
-func UnmarshalForm(w http.ResponseWriter, r *http.Request, fn func(*Form)) ValidationErrMsgs {
+func UnmarshalForm(w http.ResponseWriter, r *http.Request, fn func(*Form)) (errMsgs ValidationErrMsgs, ok bool) {
 	r.ParseForm()
-	errMsgs := ValidationErrMsgs{InputErrMsgs: make(map[string][]string)}
+	errMsgs = ValidationErrMsgs{InputErrMsgs: make(map[string][]string)}
 	form := &Form{
 		mode:         FormModeUnmarshal,
 		request:      r,
@@ -94,8 +90,9 @@ func UnmarshalForm(w http.ResponseWriter, r *http.Request, fn func(*Form)) Valid
 		for name, msgs := range form.inputErrMsgs {
 			errMsgs.InputErrMsgs[name] = msgs
 		}
+		return errMsgs, false
 	}
-	return errMsgs
+	return errMsgs, true
 }
 
 func Redirect(w http.ResponseWriter, r *http.Request, url string, errMsgs ValidationErrMsgs) error {

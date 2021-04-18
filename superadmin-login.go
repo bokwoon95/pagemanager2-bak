@@ -57,8 +57,8 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "POST":
-		errMsgs := hyforms.UnmarshalForm(w, r, data.LoginForm)
-		if errMsgs.IsNonEmpty() {
+		errMsgs, ok := hyforms.UnmarshalForm(w, r, data.LoginForm)
+		if !ok {
 			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
 			return
 		}

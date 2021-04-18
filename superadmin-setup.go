@@ -86,8 +86,8 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "POST":
-		errMsgs := hyforms.UnmarshalForm(w, r, data.setupForm)
-		if errMsgs.IsNonEmpty() {
+		errMsgs, ok := hyforms.UnmarshalForm(w, r, data.setupForm)
+		if !ok {
 			_ = hyforms.SetCookieValue(w, setupForm, data, nil)
 			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
 			return
