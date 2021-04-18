@@ -5,9 +5,9 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
-	"github.com/bokwoon95/erro"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/nacl/secretbox"
 )
@@ -17,6 +17,13 @@ type Box struct {
 	getKeys    func() (keys [][]byte, err error)
 	processKey func(keyIn []byte) (keyOut []byte, err error)
 }
+
+var (
+	ErrNoKey             = errors.New("no key found")
+	ErrCiphertextInvalid = errors.New("ciphertext invalid")
+	ErrHashInvalid       = errors.New("hash invalid")
+	ErrHashedMsgInvalid  = errors.New("hashed message invalid")
+)
 
 func NewStaticKey(key []byte) (Box, error) {
 	if len(key) == 0 {
@@ -39,22 +46,22 @@ func (box Box) Encrypt(plaintext []byte) (ciphertext []byte, err error) {
 		var keys [][]byte
 		keys, err = box.getKeys()
 		if err != nil {
-			return nil, erro.Wrap(err)
+			return nil, err
 		}
 		if len(keys) == 0 {
-			return nil, erro.Wrap(fmt.Errorf("no key found"))
+			return nil, ErrNoKey
 		}
 		key = keys[0]
 	} else {
 		if len(box.key) == 0 {
-			return nil, erro.Wrap(fmt.Errorf("no key found"))
+			return nil, ErrNoKey
 		}
 		key = box.key
 	}
 	if box.processKey != nil {
 		key, err = box.processKey(key)
 		if err != nil {
-			return nil, erro.Wrap(err)
+			return nil, err
 		}
 	}
 	hashedKey := blake2b.Sum512(key)
@@ -62,7 +69,7 @@ func (box Box) Encrypt(plaintext []byte) (ciphertext []byte, err error) {
 	copy(hashKeyUpper[:], hashedKey[:32])
 	var nonce [nonceSize]byte
 	if _, err := rand.Read(nonce[:]); err != nil {
-		return nil, erro.Wrap(err)
+		return nil, err
 	}
 	ciphertext = secretbox.Seal(nonce[:], plaintext, &nonce, &hashKeyUpper)
 	return ciphertext, nil
@@ -74,14 +81,14 @@ func (box Box) Decrypt(ciphertext []byte) (plaintext []byte, err error) {
 	if box.getKeys != nil {
 		keys, err = box.getKeys()
 		if err != nil {
-			return nil, erro.Wrap(err)
+			return nil, err
 		}
 		if len(keys) == 0 {
-			return nil, erro.Wrap(fmt.Errorf("no key found"))
+			return nil, ErrNoKey
 		}
 	} else {
 		if len(box.key) == 0 {
-			return nil, erro.Wrap(fmt.Errorf("no key found"))
+			return nil, ErrNoKey
 		}
 		keys = [][]byte{box.key}
 	}
@@ -89,7 +96,7 @@ func (box Box) Decrypt(ciphertext []byte) (plaintext []byte, err error) {
 		if box.processKey != nil {
 			key, err = box.processKey(key)
 			if err != nil {
-				return nil, erro.Wrap(err)
+				return nil, err
 			}
 		}
 		hashedKey := blake2b.Sum512(key)
@@ -103,7 +110,7 @@ func (box Box) Decrypt(ciphertext []byte) (plaintext []byte, err error) {
 		}
 		return plaintext, nil
 	}
-	return nil, erro.Wrap(fmt.Errorf("decryption error"))
+	return nil, ErrCiphertextInvalid
 }
 
 func (box Box) Hash(msg []byte) (hash []byte, err error) {
@@ -112,22 +119,22 @@ func (box Box) Hash(msg []byte) (hash []byte, err error) {
 		var keys [][]byte
 		keys, err = box.getKeys()
 		if err != nil {
-			return nil, erro.Wrap(err)
+			return nil, err
 		}
 		if len(keys) == 0 {
-			return nil, erro.Wrap(fmt.Errorf("no key found"))
+			return nil, ErrNoKey
 		}
 		key = keys[0]
 	} else {
 		if len(box.key) == 0 {
-			return nil, erro.Wrap(fmt.Errorf("no key found"))
+			return nil, ErrNoKey
 		}
 		key = box.key
 	}
 	if box.processKey != nil {
 		key, err = box.processKey(key)
 		if err != nil {
-			return nil, erro.Wrap(err)
+			return nil, err
 		}
 	}
 	hashedKey := blake2b.Sum512([]byte(key))
@@ -145,14 +152,14 @@ func (box Box) VerifyHash(msg []byte, hash []byte) error {
 	if box.getKeys != nil {
 		keys, err = box.getKeys()
 		if err != nil {
-			return erro.Wrap(err)
+			return err
 		}
 		if len(keys) == 0 {
-			return erro.Wrap(fmt.Errorf("no key found"))
+			return ErrNoKey
 		}
 	} else {
 		if len(box.key) == 0 {
-			return erro.Wrap(fmt.Errorf("no key found"))
+			return ErrNoKey
 		}
 		keys = [][]byte{box.key}
 	}
@@ -160,7 +167,7 @@ func (box Box) VerifyHash(msg []byte, hash []byte) error {
 		if box.processKey != nil {
 			key, err = box.processKey(key)
 			if err != nil {
-				return erro.Wrap(err)
+				return ErrNoKey
 			}
 		}
 		hashedKey := blake2b.Sum512([]byte(key))
@@ -173,13 +180,13 @@ func (box Box) VerifyHash(msg []byte, hash []byte) error {
 			return nil
 		}
 	}
-	return erro.Wrap(fmt.Errorf("hash not valid"))
+	return ErrHashInvalid
 }
 
 func (box Box) Base64Encrypt(plaintext []byte) (b64Ciphertext []byte, err error) {
 	ciphertext, err := box.Encrypt(plaintext)
 	if err != nil {
-		return nil, erro.Wrap(err)
+		return nil, err
 	}
 	b64Ciphertext = make([]byte, base64.RawURLEncoding.EncodedLen(len(ciphertext)))
 	base64.RawURLEncoding.Encode(b64Ciphertext, ciphertext)
@@ -190,20 +197,17 @@ func (box Box) Base64Decrypt(b64Ciphertext []byte) (plaintext []byte, err error)
 	ciphertext := make([]byte, base64.RawURLEncoding.DecodedLen(len(b64Ciphertext)))
 	n, err := base64.RawURLEncoding.Decode(ciphertext, b64Ciphertext)
 	if err != nil {
-		return nil, erro.Wrap(err)
+		return nil, err
 	}
 	ciphertext = ciphertext[:n]
 	plaintext, err = box.Decrypt(ciphertext)
-	if err != nil {
-		return nil, erro.Wrap(err)
-	}
-	return plaintext, nil
+	return plaintext, err
 }
 
 func (box Box) Base64Hash(msg []byte) (b64HashedMsg []byte, err error) {
 	hash, err := box.Hash(msg)
 	if err != nil {
-		return nil, erro.Wrap(err)
+		return nil, err
 	}
 	b64Msg := make([]byte, base64.RawURLEncoding.EncodedLen(len(msg)))
 	base64.RawURLEncoding.Encode(b64Msg, msg)
@@ -224,24 +228,24 @@ func (box Box) Base64VerifyHash(b64HashedMsg []byte) (msg []byte, err error) {
 		}
 	}
 	if dotIndex < 0 {
-		return nil, erro.Wrap(fmt.Errorf("invalid b64HashedMsg"))
+		return nil, ErrHashedMsgInvalid
 	}
 	b64Msg := b64HashedMsg[:dotIndex]
 	msg = make([]byte, base64.RawURLEncoding.DecodedLen(len(b64Msg)))
 	n, err := base64.RawURLEncoding.Decode(msg, b64Msg)
 	if err != nil {
-		return nil, erro.Wrap(err)
+		return nil, err
 	}
 	msg = msg[:n]
 	b64Hash := b64HashedMsg[dotIndex+1:]
 	hash := make([]byte, base64.RawURLEncoding.DecodedLen(len(b64Hash)))
 	n, err = base64.RawURLEncoding.Decode(hash, b64Hash)
 	if err != nil {
-		return nil, erro.Wrap(err)
+		return nil, err
 	}
 	err = box.VerifyHash(msg, hash)
 	if err != nil {
-		return nil, erro.Wrap(err)
+		return nil, err
 	}
 	return msg, nil
 }
