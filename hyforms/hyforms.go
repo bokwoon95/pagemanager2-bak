@@ -29,11 +29,7 @@ func (errMsgs ValidationErrMsgs) IsNonEmpty() bool {
 	return len(errMsgs.FormErrMsgs) > 0 || len(errMsgs.InputErrMsgs) > 0
 }
 
-type Hyforms struct {
-	box encrypthash.Box
-}
-
-var defaultHyforms = func() *Hyforms {
+var box encrypthash.Box = func() encrypthash.Box {
 	key := make([]byte, 24)
 	_, err := rand.Read(key)
 	if err != nil {
@@ -43,10 +39,10 @@ var defaultHyforms = func() *Hyforms {
 	if err != nil {
 		panic(err)
 	}
-	return &Hyforms{box: box}
+	return box
 }()
 
-func (hyf *Hyforms) MarshalForm(s hy.Sanitizer, w http.ResponseWriter, r *http.Request, fn func(*Form)) (template.HTML, error) {
+func MarshalForm(s hy.Sanitizer, w http.ResponseWriter, r *http.Request, fn func(*Form)) (template.HTML, error) {
 	form := &Form{
 		request:      r,
 		inputNames:   make(map[string]struct{}),
@@ -58,7 +54,7 @@ func (hyf *Hyforms) MarshalForm(s hy.Sanitizer, w http.ResponseWriter, r *http.R
 			return
 		}
 		defer http.SetCookie(w, &http.Cookie{Name: "hyforms.ValidationErrMsgs", MaxAge: -1})
-		b, err := hyf.box.Base64VerifyHash([]byte(c.Value))
+		b, err := box.Base64VerifyHash([]byte(c.Value))
 		if err != nil {
 			return
 		}
@@ -84,7 +80,7 @@ func (hyf *Hyforms) MarshalForm(s hy.Sanitizer, w http.ResponseWriter, r *http.R
 	return output, nil
 }
 
-func (hyf *Hyforms) UnmarshalForm(w http.ResponseWriter, r *http.Request, fn func(*Form)) ValidationErrMsgs {
+func UnmarshalForm(w http.ResponseWriter, r *http.Request, fn func(*Form)) ValidationErrMsgs {
 	r.ParseForm()
 	errMsgs := ValidationErrMsgs{InputErrMsgs: make(map[string][]string)}
 	form := &Form{
@@ -103,7 +99,7 @@ func (hyf *Hyforms) UnmarshalForm(w http.ResponseWriter, r *http.Request, fn fun
 	return errMsgs
 }
 
-func (hyf *Hyforms) Redirect(w http.ResponseWriter, r *http.Request, url string, errMsgs ValidationErrMsgs) error {
+func Redirect(w http.ResponseWriter, r *http.Request, url string, errMsgs ValidationErrMsgs) error {
 	defer http.Redirect(w, r, url, http.StatusMovedPermanently)
 	errMsgs.Expires = time.Now().Add(10 * time.Second)
 	buf := &bytes.Buffer{}
@@ -111,7 +107,7 @@ func (hyf *Hyforms) Redirect(w http.ResponseWriter, r *http.Request, url string,
 	if err != nil {
 		return fmt.Errorf("%+v: failed gob encoding %s", errMsgs, err.Error())
 	}
-	value, err := hyf.box.Base64Hash(buf.Bytes())
+	value, err := box.Base64Hash(buf.Bytes())
 	if err != nil {
 		return erro.Wrap(err)
 	}
@@ -123,11 +119,7 @@ func (hyf *Hyforms) Redirect(w http.ResponseWriter, r *http.Request, url string,
 	return nil
 }
 
-func Redirect(w http.ResponseWriter, r *http.Request, url string, errMsgs ValidationErrMsgs) error {
-	return defaultHyforms.Redirect(w, r, url, errMsgs)
-}
-
-func (hyf *Hyforms) CookieSet(w http.ResponseWriter, cookieName string, value interface{}, cookieTemplate *http.Cookie) error {
+func SetCookieValue(w http.ResponseWriter, cookieName string, value interface{}, cookieTemplate *http.Cookie) error {
 	buf := &bytes.Buffer{}
 	switch value := value.(type) {
 	case []byte:
@@ -140,7 +132,7 @@ func (hyf *Hyforms) CookieSet(w http.ResponseWriter, cookieName string, value in
 			return erro.Wrap(err)
 		}
 	}
-	b64HashedValue, err := hyf.box.Base64Hash(buf.Bytes())
+	b64HashedValue, err := box.Base64Hash(buf.Bytes())
 	if err != nil {
 		return erro.Wrap(err)
 	}
@@ -154,7 +146,7 @@ func (hyf *Hyforms) CookieSet(w http.ResponseWriter, cookieName string, value in
 	return nil
 }
 
-func (hyf *Hyforms) CookieGet(w http.ResponseWriter, r *http.Request, cookieName string, dest interface{}) error {
+func GetCookieValue(w http.ResponseWriter, r *http.Request, cookieName string, dest interface{}) error {
 	defer http.SetCookie(w, &http.Cookie{Name: cookieName, MaxAge: -1, Expires: time.Now().Add(-1 * time.Hour)})
 	c, err := r.Cookie(cookieName)
 	if err != nil && !errors.Is(err, http.ErrNoCookie) {
@@ -163,7 +155,7 @@ func (hyf *Hyforms) CookieGet(w http.ResponseWriter, r *http.Request, cookieName
 	if c == nil {
 		return nil
 	}
-	data, err := hyf.box.Base64VerifyHash([]byte(c.Value))
+	data, err := box.Base64VerifyHash([]byte(c.Value))
 	if err != nil {
 		return erro.Wrap(err)
 	}
@@ -179,22 +171,6 @@ func (hyf *Hyforms) CookieGet(w http.ResponseWriter, r *http.Request, cookieName
 		}
 	}
 	return nil
-}
-
-func MarshalForm(s hy.Sanitizer, w http.ResponseWriter, r *http.Request, fn func(*Form)) (template.HTML, error) {
-	return defaultHyforms.MarshalForm(s, w, r, fn)
-}
-
-func UnmarshalForm(w http.ResponseWriter, r *http.Request, fn func(*Form)) ValidationErrMsgs {
-	return defaultHyforms.UnmarshalForm(w, r, fn)
-}
-
-func CookieSet(w http.ResponseWriter, cookieName string, value interface{}, c *http.Cookie) error {
-	return defaultHyforms.CookieSet(w, cookieName, value, c)
-}
-
-func CookieGet(w http.ResponseWriter, r *http.Request, cookieName string, dest interface{}) error {
-	return defaultHyforms.CookieGet(w, r, cookieName, dest)
 }
 
 func caller(skip int) (file string, line int, function string) {

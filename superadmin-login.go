@@ -2,15 +2,10 @@ package pagemanager
 
 import (
 	"net/http"
-	"sync/atomic"
 
 	"github.com/bokwoon95/erro"
-	"github.com/bokwoon95/pagemanager/encrypthash"
 	"github.com/bokwoon95/pagemanager/hy"
 	"github.com/bokwoon95/pagemanager/hyforms"
-	"github.com/bokwoon95/pagemanager/keyderiv"
-	"github.com/bokwoon95/pagemanager/sq"
-	"github.com/bokwoon95/pagemanager/tables"
 	"github.com/bokwoon95/pagemanager/templates"
 )
 
@@ -67,55 +62,18 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
 			return
 		}
-		var passwordHash []byte
-		var keyParams []byte
-		SUPERADMIN := tables.NEW_SUPERADMIN(r.Context(), "")
-		rowCount, err := sq.Fetch(pm.superadminDB, sq.SQLite.
-			From(SUPERADMIN).
-			Where(SUPERADMIN.ID.EqInt(1)),
-			func(row *sq.Row) error {
-				passwordHash = row.Bytes(SUPERADMIN.PASSWORD_HASH)
-				keyParams = row.Bytes(SUPERADMIN.KEY_PARAMS)
-				return nil
-			},
-		)
+		err = pm.setSuperadminPassword([]byte(data.Password))
 		if err != nil {
 			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, erro.Wrap(err).Error())
 			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
 			return
 		}
-		if rowCount == 0 {
-			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, "No superadmin found")
-			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
+		var redirectURL string
+		_ = hyforms.GetCookieValue(w, r, "pagemanager.superadmin-login-redirect", &redirectURL)
+		if redirectURL != "" {
+			http.Redirect(w, r, redirectURL, http.StatusMovedPermanently)
 			return
 		}
-		err = keyderiv.CompareHashAndPassword(passwordHash, []byte(data.Password))
-		if err != nil {
-			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, "Invalid Password")
-			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
-			return
-		}
-		var params keyderiv.Params
-		err = params.UnmarshalBinary(keyParams)
-		if err != nil {
-			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, erro.Wrap(err).Error())
-			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
-			return
-		}
-		key := params.DeriveKey([]byte(data.Password))
-		pm.privateBox, err = encrypthash.NewStaticKey(key)
-		if err != nil {
-			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, erro.Wrap(err).Error())
-			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
-			return
-		}
-		pm.publicBox, err = encrypthash.NewRotatingKeys(pm.getKeys, pm.privateBox.Base64Decrypt)
-		if err != nil {
-			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, erro.Wrap(err).Error())
-			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
-			return
-		}
-		atomic.StoreInt32(&pm.privateBoxFlag, 1)
 		http.Redirect(w, r, "/", http.StatusMovedPermanently)
 	default:
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)

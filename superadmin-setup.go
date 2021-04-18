@@ -74,7 +74,7 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 			Title:  "PageManager Setup",
 			Header: "PageManager Setup",
 		}
-		_ = hyforms.CookieGet(w, r, setupForm, data)
+		_ = hyforms.GetCookieValue(w, r, setupForm, data)
 		templateData.Form, err = hyforms.MarshalForm(nil, w, r, data.setupForm)
 		if err != nil {
 			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
@@ -88,7 +88,7 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		errMsgs := hyforms.UnmarshalForm(w, r, data.setupForm)
 		if errMsgs.IsNonEmpty() {
-			_ = hyforms.CookieSet(w, setupForm, data, nil)
+			_ = hyforms.SetCookieValue(w, setupForm, data, nil)
 			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
 			return
 		}
@@ -139,7 +139,7 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 		_, _, err = sq.Exec(pm.superadminDB, sq.SQLite.
 			InsertInto(KEYS).
 			Valuesx(func(col *sq.Column) error {
-				col.SetInt(KEYS.ORDINAL_NUMBER, 1)
+				col.SetInt(KEYS.ID, 1)
 				col.SetString(KEYS.KEY_CIPHERTEXT, string(keyCiphertext))
 				col.SetTime(KEYS.CREATED_AT, time.Now())
 				return nil

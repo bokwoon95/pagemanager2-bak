@@ -13,8 +13,11 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/bokwoon95/erro"
+	"github.com/bokwoon95/pagemanager/encrypthash"
+	"github.com/bokwoon95/pagemanager/keyderiv"
 	"github.com/bokwoon95/pagemanager/sq"
 	"github.com/bokwoon95/pagemanager/tables"
 )
@@ -23,6 +26,7 @@ var (
 	flagDatafolder       = flag.String("pm-datafolder", "", "")
 	flagSuperadminFolder = flag.String("pm-superadmin", "", "")
 	flagNoSetup          = flag.Bool("pm-no-setup", false, "")
+	flagPass             = flag.String("pm-pass", "", "")
 )
 
 var bufpool = sync.Pool{
@@ -394,103 +398,48 @@ func getLocales(ctx context.Context, db sq.Queryer) (map[string]string, error) {
 	return locales, nil
 }
 
-// func (pm *PageManager) setupSuperadmin() error {
-// 	ctx := context.Background()
-// 	SUPERADMIN := tables.NEW_SUPERADMIN(ctx, "")
-// 	exists, err := sq.ExistsContext(ctx, pm.superadminDB, sq.SQLite.From(SUPERADMIN).Where(SUPERADMIN.ID.EqInt(1)))
-// 	if err != nil {
-// 		return erro.Wrap(err)
-// 	}
-// 	if exists {
-// 		fmt.Printf("superadmin already exists, skipping superadmin creation. If you wish to replace the existing superadmin (for example if you have forgotten the password), delete the superadmin folder located at %s and try again.\n", pm.superadminfolder)
-// 		return nil
-// 	}
-// 	password, err := readPassword(`Creating the superadmin, please enter a superadmin password.
-// The superadmin is needed to log into the website in order to make changes to it.
-// You can always change your password by deleting the superadmin folder (located at ` + pm.superadminfolder + `) and running this setup again.
-// Your password will be hidden from you as you type it, do not be alarmed.
-// superadmin password: `)
-// 	if err != nil {
-// 		return erro.Wrap(err)
-// 	}
-// 	pw := string(password)
-// 	passwordKeyDerivation, err := deriveKeyFromPassword(pw)
-// 	if err != nil {
-// 		return erro.Wrap(err)
-// 	}
-// 	innerEncryptionKeyDerivation, err := deriveKeyFromPassword(pw)
-// 	if err != nil {
-// 		return erro.Wrap(err)
-// 	}
-// 	pm.innerEncryptionKey = innerEncryptionKeyDerivation.key
-// 	innerMACKeyDerivation, err := deriveKeyFromPassword(pw)
-// 	if err != nil {
-// 		return erro.Wrap(err)
-// 	}
-// 	pm.innerMACKey = innerMACKeyDerivation.key
-// 	encryptionKey := make([]byte, 32)
-// 	_, err = rand.Read(encryptionKey)
-// 	if err != nil {
-// 		return erro.Wrap(err)
-// 	}
-// 	encryptionKeyCiphertext, err := encrypt(pm.innerEncryptionKey, string(encryptionKey))
-// 	if err != nil {
-// 		return erro.Wrap(err)
-// 	}
-// 	macKey := make([]byte, 32)
-// 	_, err = rand.Read(macKey)
-// 	if err != nil {
-// 		return erro.Wrap(err)
-// 	}
-// 	macKeyCiphertext, err := encrypt(pm.innerEncryptionKey, string(macKey))
-// 	if err != nil {
-// 		return erro.Wrap(err)
-// 	}
-// 	err = sq.WithTx(pm.superadminDB, func(tx *sql.Tx) error {
-// 		_, _, err = sq.ExecContext(ctx, tx, sq.SQLite.
-// 			InsertInto(SUPERADMIN).
-// 			Valuesx(func(col *sq.Column) error {
-// 				col.SetInt(SUPERADMIN.ID, 1)
-// 				col.SetString(SUPERADMIN.PASSWORD_HASH, passwordKeyDerivation.Marshal())
-// 				col.SetString(SUPERADMIN.ENCRYPTION_KEY_PARAMETERS, innerEncryptionKeyDerivation.MarshalParams())
-// 				col.SetString(SUPERADMIN.MAC_KEY_PARAMETERS, innerMACKeyDerivation.MarshalParams())
-// 				return nil
-// 			}),
-// 			0,
-// 		)
-// 		if err != nil {
-// 			return erro.Wrap(err)
-// 		}
-// 		ENCRYPTION_KEYS := tables.NEW_ENCRYPTION_KEYS(ctx, "")
-// 		_, _, err = sq.ExecContext(ctx, tx, sq.SQLite.
-// 			InsertInto(ENCRYPTION_KEYS).
-// 			Valuesx(func(col *sq.Column) error {
-// 				col.SetInt(ENCRYPTION_KEYS.ID, 1)
-// 				col.SetString(ENCRYPTION_KEYS.KEY_CIPHERTEXT, encryptionKeyCiphertext)
-// 				return nil
-// 			}),
-// 			0,
-// 		)
-// 		if err != nil {
-// 			return erro.Wrap(err)
-// 		}
-// 		MAC_KEYS := tables.NEW_MAC_KEYS(ctx, "")
-// 		_, _, err = sq.ExecContext(ctx, tx, sq.SQLite.
-// 			InsertInto(MAC_KEYS).
-// 			Valuesx(func(col *sq.Column) error {
-// 				col.SetInt(MAC_KEYS.ID, 1)
-// 				col.SetString(MAC_KEYS.KEY_CIPHERTEXT, macKeyCiphertext)
-// 				return nil
-// 			}),
-// 			0,
-// 		)
-// 		if err != nil {
-// 			return erro.Wrap(err)
-// 		}
-// 		return nil
-// 	})
-// 	if err != nil {
-// 		return erro.Wrap(err)
-// 	}
-// 	return nil
-// }
+func (pm *PageManager) hasSuperadminPassword() bool {
+	return atomic.LoadInt32(&pm.privateBoxFlag) == 1
+}
+
+func (pm *PageManager) setSuperadminPassword(password []byte) error {
+	ctx := context.Background()
+	var passwordHash []byte
+	var keyParams []byte
+	SUPERADMIN := tables.NEW_SUPERADMIN(ctx, "")
+	rowCount, err := sq.Fetch(pm.superadminDB, sq.SQLite.
+		From(SUPERADMIN).
+		Where(SUPERADMIN.ID.EqInt(1)),
+		func(row *sq.Row) error {
+			passwordHash = row.Bytes(SUPERADMIN.PASSWORD_HASH)
+			keyParams = row.Bytes(SUPERADMIN.KEY_PARAMS)
+			return nil
+		},
+	)
+	if err != nil {
+		return erro.Wrap(err)
+	}
+	if rowCount == 0 {
+		return erro.Wrap(fmt.Errorf("No superadmin found"))
+	}
+	err = keyderiv.CompareHashAndPassword(passwordHash, password)
+	if err != nil {
+		return erro.Wrap(fmt.Errorf("Invalid password"))
+	}
+	var params keyderiv.Params
+	err = params.UnmarshalBinary(keyParams)
+	if err != nil {
+		return erro.Wrap(err)
+	}
+	key := params.DeriveKey(password)
+	pm.privateBox, err = encrypthash.NewStaticKey(key)
+	if err != nil {
+		return erro.Wrap(err)
+	}
+	pm.publicBox, err = encrypthash.NewRotatingKeys(pm.getKeys, pm.privateBox.Base64Decrypt)
+	if err != nil {
+		return erro.Wrap(err)
+	}
+	atomic.StoreInt32(&pm.privateBoxFlag, 1)
+	return nil
+}

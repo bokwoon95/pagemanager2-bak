@@ -8,15 +8,31 @@
   background-color: #f1f1f1;
 }
 
-.center-form-container, #signup {
+.center-form-container,
+#signup {
   width: 320px;
   margin: auto;
 }
 
-#loginform, #signupform, .center-form {
+#loginform,
+#signupform,
+.center-form {
   /* margin-top: 20px; */ /* The h1 element already provides a margin */
   margin-left: 0;
   padding: 26px 24px 36px;
   border: 1px solid #ccd0d4;
   box-shadow: 0 1px 3px rgb(0 0 0 / 4%);
+}
+
+#pm-superadmin-navbar {
+  width: 100vw;
+  background-color: black;
+  display: flex;
+  justify-content: space-between;
+  position: absolute;
+  top: 0;
+}
+#pm-superadmin-navbar-padding {
+  width: 100vw;
+  background-color: black;
 }

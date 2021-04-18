@@ -28,7 +28,7 @@ func NEW_SUPERADMIN(ctx context.Context, alias string) PM_SUPERADMIN {
 
 type PM_KEYS struct {
 	sq.TableInfo
-	ORDINAL_NUMBER sq.NumberField
+	ID             sq.NumberField
 	KEY_CIPHERTEXT sq.StringField
 	CREATED_AT     sq.TimeField
 }

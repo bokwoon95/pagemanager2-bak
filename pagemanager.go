@@ -113,7 +113,7 @@ func (pm *PageManager) getKeys() (keys [][]byte, err error) {
 	}
 	ctx := context.Background()
 	KEYS := tables.NEW_KEYS(ctx, "")
-	_, err = sq.Fetch(pm.superadminDB, sq.SQLite.From(KEYS).OrderBy(KEYS.ORDINAL_NUMBER), func(row *sq.Row) error {
+	_, err = sq.Fetch(pm.superadminDB, sq.SQLite.From(KEYS).OrderBy(KEYS.ID), func(row *sq.Row) error {
 		key := row.Bytes(KEYS.KEY_CIPHERTEXT)
 		return row.Accumulate(func() error {
 			keys = append(keys, key)
@@ -131,6 +131,7 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 	mux.Handle("/", next)
 	mux.HandleFunc("/pm-superadmin-login", pm.superadminLogin)
 	mux.HandleFunc("/pm-test-encrypt", pm.testEncrypt)
+	mux.HandleFunc("/pm-superadmin", pm.superadminDashboard)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/pm-themes/") ||
 			strings.HasPrefix(r.URL.Path, "/pm-images/") ||
@@ -147,6 +148,9 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 				break
 			}
 			if superadminExists {
+				if !pm.hasSuperadminPassword() && *flagPass != "" {
+					_ = pm.setSuperadminPassword([]byte(*flagPass))
+				}
 				break
 			}
 			pm.superadminSetup(w, r)
