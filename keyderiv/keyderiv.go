@@ -119,7 +119,7 @@ func GenerateFromPassword(password []byte) (passwordHash []byte, err error) {
 func CompareHashAndPassword(passwordHash []byte, password []byte) error {
 	i := bytes.LastIndex(passwordHash, []byte("$"))
 	if i < 0 {
-		return fmt.Errorf("invalid hashedPassword")
+		return fmt.Errorf("invalid passwordHash")
 	}
 	var p Params
 	err := p.UnmarshalBinary(passwordHash[:i+1])
