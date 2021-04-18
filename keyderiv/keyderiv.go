@@ -26,22 +26,20 @@ func base64Decode(src []byte) ([]byte, error) {
 }
 
 type Params struct {
-	Argon2Version int
-	Memory        uint32
-	Time          uint32
-	Threads       uint8
-	KeyLen        uint32
-	Salt          []byte
+	Memory  uint32
+	Time    uint32
+	Threads uint8
+	KeyLen  uint32
+	Salt    []byte
 }
 
 func NewParams() (Params, error) {
 	p := Params{
-		Argon2Version: argon2.Version,
-		Memory:        63 * 1024,
-		Time:          1,
-		Threads:       4,
-		KeyLen:        32,
-		Salt:          make([]byte, 16),
+		Memory:  63 * 1024,
+		Time:    1,
+		Threads: 4,
+		KeyLen:  32,
+		Salt:    make([]byte, 16),
 	}
 	_, err := rand.Read(p.Salt)
 	return p, err
@@ -56,7 +54,7 @@ func (p Params) MarshalBinary() (data []byte, err error) {
 	var buf []byte
 	// version
 	buf = append(buf, "$argon2id$v="...)
-	buf = strconv.AppendInt(buf, int64(p.Argon2Version), 10)
+	buf = strconv.AppendInt(buf, int64(argon2.Version), 10)
 	// memory
 	buf = append(buf, "$m="...)
 	buf = strconv.AppendUint(buf, uint64(p.Memory), 10)
@@ -84,7 +82,8 @@ func (p *Params) UnmarshalBinary(data []byte) error {
 	// parts[4] = base64 URL encoded salt
 	var err error
 	parts := strings.Split(string(data), "$")
-	_, err = fmt.Sscanf(parts[2], "v=%d", &p.Argon2Version)
+	var argon2Version int
+	_, err = fmt.Sscanf(parts[2], "v=%d", &argon2Version)
 	if err != nil {
 		return err
 	}
