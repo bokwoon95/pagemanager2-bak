@@ -7,8 +7,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/bokwoon95/erro"
 )
 
 type HTMLElement struct {
@@ -19,7 +17,7 @@ type HTMLElement struct {
 func (el HTMLElement) AppendHTML(buf *strings.Builder) error {
 	err := AppendHTML(buf, el.attrs, el.children)
 	if err != nil {
-		return erro.Wrap(err)
+		return err
 	}
 	return nil
 }
@@ -126,7 +124,7 @@ func (l Elements) AppendHTML(buf *strings.Builder) error {
 	for _, el := range l {
 		err = el.AppendHTML(buf)
 		if err != nil {
-			return erro.Wrap(err)
+			return err
 		}
 	}
 	return nil
@@ -142,11 +140,11 @@ func (el JSONElement) AppendHTML(buf *strings.Builder) error {
 	el.attrs.Dict["type"] = "application/json"
 	b, err := json.Marshal(el.value)
 	if err != nil {
-		return erro.Wrap(err)
+		return err
 	}
 	err = AppendHTML(buf, el.attrs, []Element{Txt(b)})
 	if err != nil {
-		return erro.Wrap(err)
+		return err
 	}
 	return nil
 }
@@ -167,7 +165,7 @@ func (el CSSElement) AppendHTML(buf *strings.Builder) error {
 	for _, href := range el.hrefs {
 		err = AppendHTML(buf, ParseAttributes("link", Attr{"rel": "stylesheet", "href": href}), nil)
 		if err != nil {
-			return erro.Wrap(err)
+			return err
 		}
 	}
 	return nil
@@ -186,7 +184,7 @@ func (el JSElement) AppendHTML(buf *strings.Builder) error {
 	for _, src := range el.srcs {
 		err = AppendHTML(buf, ParseAttributes("script", Attr{"src": src}), nil)
 		if err != nil {
-			return erro.Wrap(err)
+			return err
 		}
 	}
 	return nil

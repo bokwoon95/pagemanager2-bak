@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/bokwoon95/erro"
 	"github.com/microcosm-cc/bluemonday"
 )
 
@@ -95,7 +94,6 @@ var defaultSanitizer = func() Sanitizer {
 
 type Attributes struct {
 	ParseErr error
-	Selector string
 	Tag      string
 	ID       string
 	Class    string
@@ -112,7 +110,7 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 		StateAttrName
 		StateAttrValue
 	)
-	attrs := Attributes{Selector: selector, Dict: make(map[string]string)}
+	attrs := Attributes{Dict: make(map[string]string)}
 	defer func() {
 		if attrs.ParseErr != nil {
 			for k, v := range attributes {
@@ -124,7 +122,7 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 	var classes []string
 	var name []rune
 	var value []rune
-	for _, c := range selector {
+	for i, c := range selector {
 		if c == '#' || c == '.' || c == '[' {
 			switch state {
 			case StateTag:
@@ -136,7 +134,7 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 					classes = append(classes, string(value))
 				}
 			case StateAttrName, StateAttrValue:
-				attrs.ParseErr = erro.Wrap(fmt.Errorf("unclosed attribute"))
+				attrs.ParseErr = fmt.Errorf("unclosed attribute: position=%d char=%c selector=%s", i, c, selector)
 				return attrs
 			}
 			value = value[:0]
@@ -155,7 +153,7 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 			case StateAttrName:
 				state = StateAttrValue
 			default:
-				attrs.ParseErr = erro.Wrap(fmt.Errorf("unopened attribute"))
+				attrs.ParseErr = fmt.Errorf("unopened attribute: position=%d char=%c selector=%s", i, c, selector)
 				return attrs
 			}
 			continue
@@ -173,7 +171,7 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 				}
 				attrs.Dict[string(name)] = string(value)
 			default:
-				attrs.ParseErr = erro.Wrap(fmt.Errorf("unopened attribute"))
+				attrs.ParseErr = fmt.Errorf("unopened attribute: position=%d char=%c selector=%s", i, c, selector)
 				return attrs
 			}
 			name = name[:0]
@@ -187,7 +185,7 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 		case StateAttrName:
 			name = append(name, c)
 		case StateNone:
-			attrs.ParseErr = erro.Wrap(fmt.Errorf("unknown state (please prepend with '#', '.' or '['"))
+			attrs.ParseErr = fmt.Errorf("unknown state (please prepend with '#', '.' or '['): position=%d char=%c selector=%s", i, c, selector)
 			return attrs
 		}
 	}
@@ -202,7 +200,7 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 			classes = append(classes, string(value))
 		case StateNone: // do nothing i.e. drop the value
 		case StateAttrName, StateAttrValue:
-			attrs.ParseErr = erro.Wrap(fmt.Errorf("unclosed attribute"))
+			attrs.ParseErr = fmt.Errorf("unclosed attribute: selector=%s", selector)
 			return attrs
 		}
 		value = value[:0]
@@ -228,7 +226,7 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 func AppendHTML(buf *strings.Builder, attrs Attributes, children []Element) error {
 	var err error
 	if attrs.ParseErr != nil {
-		return erro.Wrap(attrs.ParseErr)
+		return attrs.ParseErr
 	}
 	if attrs.Tag != "" {
 		buf.WriteString(`<` + attrs.Tag)
@@ -241,7 +239,7 @@ func AppendHTML(buf *strings.Builder, attrs Attributes, children []Element) erro
 		for _, child := range children {
 			err = child.AppendHTML(buf)
 			if err != nil {
-				return erro.Wrap(err)
+				return err
 			}
 		}
 		buf.WriteString("</" + attrs.Tag + ">")
@@ -286,7 +284,7 @@ func MarshalElement(s Sanitizer, el Element) (template.HTML, error) {
 	}()
 	err := el.AppendHTML(buf)
 	if err != nil {
-		return "", erro.Wrap(err)
+		return "", err
 	}
 	if s == nil {
 		s = defaultSanitizer
@@ -305,7 +303,7 @@ func MarshalElements(s Sanitizer, elements map[*template.HTML]Element) error {
 		}
 		*dest, err = MarshalElement(s, element)
 		if err != nil {
-			return erro.Wrap(err)
+			return err
 		}
 	}
 	return nil
