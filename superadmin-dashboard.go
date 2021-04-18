@@ -17,7 +17,7 @@ func (pm *PageManager) superadminDashboard(w http.ResponseWriter, r *http.Reques
 	case "GET":
 		if atomic.LoadInt32(&pm.privateBoxFlag) != 1 {
 			_ = hyforms.SetCookieValue(w, "pagemanager.superadmin-login-redirect", r.URL.Path, nil)
-			http.Redirect(w, r, "/pm-superadmin-login", http.StatusMovedPermanently)
+			http.Redirect(w, r, "/pm-superadmin/login", http.StatusMovedPermanently)
 			return
 		}
 		err = executeTemplates(w, nil, pagemanagerFS, "superadmin-dashboard.html")

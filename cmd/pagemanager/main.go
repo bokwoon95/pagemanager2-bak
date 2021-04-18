@@ -23,7 +23,7 @@ func main() {
 	mux.Use(pm.PageManager)
 	mux.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		// http.Redirect(w, r, "/pm-dashboard", http.StatusMovedPermanently)
-		w.Write([]byte(`<h1>hello world</h1><br><a href="/pm-superadmin-login">Log In</a>`))
+		w.Write([]byte(`<h1>hello world</h1><br><a href="/pm-superadmin/login">Log In</a>`))
 		w.Write([]byte(`<br><a href="/pm-superadmin">Dashboard</a>`))
 	})
 	fmt.Println("listening on :80")

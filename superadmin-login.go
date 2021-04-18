@@ -74,7 +74,7 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, redirectURL, http.StatusMovedPermanently)
 			return
 		}
-		http.Redirect(w, r, "/", http.StatusMovedPermanently)
+		http.Redirect(w, r, "/pm-superadmin", http.StatusMovedPermanently)
 	default:
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 	}

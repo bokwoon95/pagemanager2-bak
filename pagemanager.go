@@ -129,9 +129,9 @@ func (pm *PageManager) getKeys() (keys [][]byte, err error) {
 func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/", next)
-	mux.HandleFunc("/pm-superadmin-login", pm.superadminLogin)
+	mux.HandleFunc("/pm-superadmin/login", pm.superadminLogin)
+	mux.HandleFunc("/pm-superadmin/", pm.superadminDashboard)
 	mux.HandleFunc("/pm-test-encrypt", pm.testEncrypt)
-	mux.HandleFunc("/pm-superadmin", pm.superadminDashboard)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/pm-themes/") ||
 			strings.HasPrefix(r.URL.Path, "/pm-images/") ||

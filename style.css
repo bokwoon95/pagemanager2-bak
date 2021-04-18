@@ -26,13 +26,11 @@
 
 #pm-superadmin-navbar {
   width: 100vw;
-  background-color: black;
+  background-color: #004f98;
+  border-bottom: 1px solid #ccd0d4;
   display: flex;
   justify-content: space-between;
-  position: absolute;
-  top: 0;
-}
-#pm-superadmin-navbar-padding {
-  width: 100vw;
-  background-color: black;
+  height: 32px;
+  color: white;
+  align-items: center;
 }
