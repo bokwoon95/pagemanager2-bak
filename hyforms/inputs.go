@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bokwoon95/erro"
 	"github.com/bokwoon95/pagemanager/hy"
 )
 
@@ -46,7 +45,7 @@ func (i *Input) AppendHTML(buf *strings.Builder) error {
 	i.attrs.Dict["value"] = i.defaultValue
 	err := hy.AppendHTML(buf, i.attrs, nil)
 	if err != nil {
-		return erro.Wrap(err)
+		return err
 	}
 	return nil
 }
@@ -76,7 +75,7 @@ func (i *Input) Int(validators ...Validator) (num int, err error) {
 	value := i.form.request.FormValue(i.name)
 	num, err = strconv.Atoi(value)
 	if err != nil {
-		return 0, erro.Wrap(err)
+		return 0, err
 	}
 	validateInput(i.form, i.name, num, validators)
 	return num, nil
@@ -89,7 +88,7 @@ func (i *Input) Float64(validators ...Validator) (num float64, err error) {
 	value := i.form.request.FormValue(i.name)
 	num, err = strconv.ParseFloat(value, 64)
 	if err != nil {
-		return 0, erro.Wrap(err)
+		return 0, err
 	}
 	validateInput(i.form, i.name, num, validators)
 	return num, nil
@@ -149,7 +148,7 @@ func (i *ToggledInput) AppendHTML(buf *strings.Builder) error {
 	}
 	err := hy.AppendHTML(buf, i.attrs, nil)
 	if err != nil {
-		return erro.Wrap(err)
+		return err
 	}
 	return nil
 }
@@ -258,7 +257,7 @@ func (o Option) AppendHTML(buf *strings.Builder) error {
 	}
 	err := hy.AppendHTML(buf, attrs, []hy.Element{hy.Txt(o.Display)})
 	if err != nil {
-		return erro.Wrap(err)
+		return err
 	}
 	return nil
 }
@@ -285,7 +284,7 @@ func (i *SelectInput) AppendHTML(buf *strings.Builder) error {
 		i.attrs.Dict = make(map[string]string)
 	}
 	if i.attrs.ParseErr != nil {
-		return erro.Wrap(i.attrs.ParseErr)
+		return i.attrs.ParseErr
 	}
 	buf.WriteString(`<select`)
 	hy.AppendAttributes(buf, i.attrs)
@@ -314,7 +313,7 @@ func (i *SelectInput) AppendHTML(buf *strings.Builder) error {
 			}
 			err = hy.AppendHTML(buf, attrs, children)
 			if err != nil {
-				return erro.Wrap(err)
+				return err
 			}
 		}
 	}

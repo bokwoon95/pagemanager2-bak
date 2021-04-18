@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/bokwoon95/erro"
 	"github.com/bokwoon95/pagemanager/hy"
 )
 
@@ -36,7 +35,7 @@ func (f *Form) AppendHTML(buf *strings.Builder) error {
 	f.attrs.Tag = "form"
 	err := hy.AppendHTML(buf, f.attrs, f.children)
 	if err != nil {
-		return erro.Wrap(err)
+		return err
 	}
 	return nil
 }

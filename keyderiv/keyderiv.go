@@ -13,6 +13,18 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
+func base64Encode(src []byte) []byte {
+	buf := make([]byte, base64.RawURLEncoding.EncodedLen(len(src)))
+	base64.RawURLEncoding.Encode(buf, src)
+	return buf
+}
+
+func base64Decode(src []byte) ([]byte, error) {
+	dbuf := make([]byte, base64.RawURLEncoding.DecodedLen(len(src)))
+	n, err := base64.RawURLEncoding.Decode(dbuf, src)
+	return dbuf[:n], err
+}
+
 type Params struct {
 	Argon2Version int
 	Memory        uint32
@@ -59,7 +71,7 @@ func (p Params) MarshalBinary() (data []byte, err error) {
 	buf = strconv.AppendUint(buf, uint64(p.KeyLen), 10)
 	// salt
 	buf = append(buf, '$')
-	buf = append(buf, base64.RawURLEncoding.EncodeToString(p.Salt)...)
+	buf = append(buf, base64Encode(p.Salt)...)
 	buf = append(buf, '$')
 	return buf, nil
 }
@@ -80,7 +92,7 @@ func (p *Params) UnmarshalBinary(data []byte) error {
 	if err != nil {
 		return err
 	}
-	p.Salt, err = base64.RawURLEncoding.DecodeString(parts[4])
+	p.Salt, err = base64Decode([]byte(parts[4]))
 	if err != nil {
 		return err
 	}
@@ -100,7 +112,7 @@ func GenerateFromPassword(password []byte) (passwordHash []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	passwordHash = append(passwordHash, base64.RawURLEncoding.EncodeToString(params.DeriveKey(password))...)
+	passwordHash = append(passwordHash, base64Encode(params.DeriveKey(password))...)
 	return passwordHash, nil
 }
 
@@ -115,7 +127,7 @@ func CompareHashAndPassword(passwordHash []byte, password []byte) error {
 		return err
 	}
 	derivedKey := p.DeriveKey(password)
-	providedKey, err := base64.RawURLEncoding.DecodeString(string(passwordHash[i+1:]))
+	providedKey, err := base64Decode(passwordHash[i+1:])
 	if err != nil {
 		return err
 	}

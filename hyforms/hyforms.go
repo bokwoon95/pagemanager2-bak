@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bokwoon95/erro"
 	"github.com/bokwoon95/pagemanager/encrypthash"
 	"github.com/bokwoon95/pagemanager/hy"
 )
@@ -71,11 +70,11 @@ func MarshalForm(s hy.Sanitizer, w http.ResponseWriter, r *http.Request, fn func
 	}()
 	fn(form)
 	if len(form.marshalErrMsgs) > 0 {
-		return "", erro.Wrap(fmt.Errorf("marshal errors %v", form.marshalErrMsgs))
+		return "", fmt.Errorf("marshal errors %v", form.marshalErrMsgs)
 	}
 	output, err := hy.MarshalElement(s, form)
 	if err != nil {
-		return output, erro.Wrap(err)
+		return output, err
 	}
 	return output, nil
 }
@@ -109,7 +108,7 @@ func Redirect(w http.ResponseWriter, r *http.Request, url string, errMsgs Valida
 	}
 	value, err := box.Base64Hash(buf.Bytes())
 	if err != nil {
-		return erro.Wrap(err)
+		return err
 	}
 	http.SetCookie(w, &http.Cookie{
 		Name:   "hyforms.ValidationErrMsgs",
@@ -129,12 +128,12 @@ func SetCookieValue(w http.ResponseWriter, cookieName string, value interface{},
 	default:
 		err := gob.NewEncoder(buf).Encode(value)
 		if err != nil {
-			return erro.Wrap(err)
+			return err
 		}
 	}
 	b64HashedValue, err := box.Base64Hash(buf.Bytes())
 	if err != nil {
-		return erro.Wrap(err)
+		return err
 	}
 	cookie := &http.Cookie{}
 	if cookieTemplate != nil {
@@ -150,14 +149,14 @@ func GetCookieValue(w http.ResponseWriter, r *http.Request, cookieName string, d
 	defer http.SetCookie(w, &http.Cookie{Name: cookieName, MaxAge: -1, Expires: time.Now().Add(-1 * time.Hour)})
 	c, err := r.Cookie(cookieName)
 	if err != nil && !errors.Is(err, http.ErrNoCookie) {
-		return erro.Wrap(err)
+		return err
 	}
 	if c == nil {
 		return nil
 	}
 	data, err := box.Base64VerifyHash([]byte(c.Value))
 	if err != nil {
-		return erro.Wrap(err)
+		return err
 	}
 	switch dest := dest.(type) {
 	case *[]byte:
@@ -167,7 +166,7 @@ func GetCookieValue(w http.ResponseWriter, r *http.Request, cookieName string, d
 	default:
 		err = gob.NewDecoder(bytes.NewReader(data)).Decode(dest)
 		if err != nil {
-			return erro.Wrap(err)
+			return err
 		}
 	}
 	return nil
