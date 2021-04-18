@@ -11,6 +11,7 @@ import (
 	"html/template"
 	"net/http"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/bokwoon95/erro"
@@ -235,4 +236,13 @@ func validateInput(f *Form, inputName string, value interface{}, validators []Va
 			return
 		}
 	}
+}
+
+func ErrMsgsMatch(errMsgs []string, target string) bool {
+	for _, msg := range errMsgs {
+		if strings.Contains(msg, target) {
+			return true
+		}
+	}
+	return false
 }

@@ -1,4 +1,4 @@
-// Package encrypthash encrypts and hashes given a static key (or a set of rotating keys).
+// Package encrypthash provides both encryption and hashing.
 package encrypthash
 
 import (

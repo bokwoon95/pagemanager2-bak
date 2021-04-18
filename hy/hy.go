@@ -65,6 +65,9 @@ var defaultSanitizer = func() Sanitizer {
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/option#attributes
 	p.AllowElements("option")
 	p.AllowAttrs("disabled", "label", "selected", "value").OnElements("option")
+	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/optgroup#attributes
+	p.AllowElements("optgroup")
+	p.AllowAttrs("label", "disabled").OnElements("optgroup")
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/inputmode
 	p.AllowAttrs("inputmode").Globally()
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link#attributes
@@ -241,7 +244,7 @@ func AppendHTML(buf *strings.Builder, attrs Attributes, children []Element) erro
 		switch value {
 		case Enabled:
 			buf.WriteString(` ` + name)
-		case Disabled:
+		case Disabled, "id", "class":
 			continue
 		default:
 			buf.WriteString(` ` + name + `="` + value + `"`)

@@ -13,3 +13,13 @@ form.Select("all-over-the-world", hyp.Opts{
         {},
     }},
 })
+
+form.Select("all-over-the-world", hy.Options{
+    {Value: "", Display: ""},
+    {Optgroup: "", Options: hy.Options{
+        {Value: "", Display: ""},
+        {Value: "", Display: ""},
+        {Value: "", Display: ""},
+    }},
+    {Value: "", Display: ""},
+})

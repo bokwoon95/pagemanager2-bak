@@ -70,7 +70,7 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 		var passwordHash []byte
 		var keyParams []byte
 		SUPERADMIN := tables.NEW_SUPERADMIN(r.Context(), "")
-		_, err = sq.Fetch(pm.superadminDB, sq.SQLite.
+		rowCount, err := sq.Fetch(pm.superadminDB, sq.SQLite.
 			From(SUPERADMIN).
 			Where(SUPERADMIN.ID.EqInt(1)),
 			func(row *sq.Row) error {
@@ -81,6 +81,11 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 		)
 		if err != nil {
 			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, erro.Wrap(err).Error())
+			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
+			return
+		}
+		if rowCount == 0 {
+			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, "No superadmin found")
 			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
 			return
 		}

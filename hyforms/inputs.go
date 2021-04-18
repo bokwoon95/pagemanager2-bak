@@ -16,6 +16,26 @@ type Input struct {
 	defaultValue string
 }
 
+func (f *Form) Input(inputType string, name string, defaultValue string) *Input {
+	f.registerName(name, 1)
+	return &Input{form: f, inputType: inputType, name: name, defaultValue: defaultValue}
+}
+
+func (f *Form) Text(name string, defaultValue string) *Input {
+	f.registerName(name, 1)
+	return &Input{form: f, inputType: "text", name: name, defaultValue: defaultValue}
+}
+
+func (f *Form) Hidden(name string, defaultValue string) *Input {
+	f.registerName(name, 1)
+	return &Input{form: f, inputType: "hidden", name: name, defaultValue: defaultValue}
+}
+
+func (i *Input) Set(selector string, attributes map[string]string) *Input {
+	i.attrs = hy.ParseAttributes(selector, attributes)
+	return i
+}
+
 func (i *Input) AppendHTML(buf *strings.Builder) error {
 	if i.attrs.Dict == nil {
 		i.attrs.Dict = make(map[string]string)
@@ -31,37 +51,13 @@ func (i *Input) AppendHTML(buf *strings.Builder) error {
 	return nil
 }
 
-func (i *Input) Type() string         { return i.inputType }
-func (i *Input) ID() string           { return i.attrs.ID }
-func (i *Input) Name() string         { return i.name }
+func (i *Input) Type() string { return i.inputType }
+
+func (i *Input) ID() string { return i.attrs.ID }
+
+func (i *Input) Name() string { return i.name }
+
 func (i *Input) DefaultValue() string { return i.defaultValue }
-
-func (i *Input) Set(selector string, attributes map[string]string) *Input {
-	i.attrs = hy.ParseAttributes(selector, attributes)
-	return i
-}
-
-func (i *Input) Validate(validators ...Validator) *Input {
-	var value interface{}
-	if len(i.form.request.Form[i.name]) > 0 {
-		value = i.form.request.Form[i.name][0]
-	}
-	validateInput(i.form, i.name, value, validators)
-	return i
-}
-
-func ErrMsgsMatch(errMsgs []string, target string) bool {
-	for _, msg := range errMsgs {
-		if strings.Contains(msg, target) {
-			return true
-		}
-	}
-	return false
-}
-
-func (i *Input) ErrMsgs() []string {
-	return i.form.inputErrMsgs[i.name]
-}
 
 func (i *Input) Value() string {
 	if i.form.mode != FormModeUnmarshal {
@@ -99,19 +95,17 @@ func (i *Input) Float64(validators ...Validator) (num float64, err error) {
 	return num, nil
 }
 
-func (f *Form) Input(inputType string, name string, defaultValue string) *Input {
-	f.registerName(name, 1)
-	return &Input{form: f, inputType: inputType, name: name, defaultValue: defaultValue}
+func (i *Input) Validate(validators ...Validator) *Input {
+	var value interface{}
+	if len(i.form.request.Form[i.name]) > 0 {
+		value = i.form.request.Form[i.name][0]
+	}
+	validateInput(i.form, i.name, value, validators)
+	return i
 }
 
-func (f *Form) Text(name string, defaultValue string) *Input {
-	f.registerName(name, 1)
-	return &Input{form: f, inputType: "text", name: name, defaultValue: defaultValue}
-}
-
-func (f *Form) Hidden(name string, defaultValue string) *Input {
-	f.registerName(name, 1)
-	return &Input{form: f, inputType: "hidden", name: name, defaultValue: defaultValue}
+func (i *Input) ErrMsgs() []string {
+	return i.form.inputErrMsgs[i.name]
 }
 
 type ToggledInput struct {
@@ -121,6 +115,21 @@ type ToggledInput struct {
 	name      string
 	value     string
 	checked   bool
+}
+
+func (f *Form) Checkbox(name string, value string, checked bool) *ToggledInput {
+	f.registerName(name, 1)
+	return &ToggledInput{form: f, inputType: "checkbox", name: name, value: value, checked: checked}
+}
+
+func (f *Form) Radio(name string, value string, checked bool) *ToggledInput {
+	f.registerName(name, 1)
+	return &ToggledInput{form: f, inputType: "radio", name: name, value: value, checked: checked}
+}
+
+func (i *ToggledInput) Set(selector string, attributes map[string]string) *ToggledInput {
+	i.attrs = hy.ParseAttributes(selector, attributes)
+	return i
 }
 
 func (i *ToggledInput) AppendHTML(buf *strings.Builder) error {
@@ -145,35 +154,21 @@ func (i *ToggledInput) AppendHTML(buf *strings.Builder) error {
 	return nil
 }
 
-func (f *Form) Checkbox(name string, value string, checked bool) *ToggledInput {
-	f.registerName(name, 1)
-	return &ToggledInput{form: f, inputType: "checkbox", name: name, value: value, checked: checked}
-}
+func (i *ToggledInput) Type() string { return i.inputType }
 
-func (f *Form) Radio(name string, value string, checked bool) *ToggledInput {
-	f.registerName(name, 1)
-	return &ToggledInput{form: f, inputType: "radio", name: name, value: value, checked: checked}
-}
+func (i *ToggledInput) ID() string { return i.attrs.ID }
 
-func (i *ToggledInput) Name() string  { return i.name }
-func (i *ToggledInput) ID() string    { return i.attrs.ID }
-func (i *ToggledInput) Type() string  { return i.inputType }
+func (i *ToggledInput) Name() string { return i.name }
+
 func (i *ToggledInput) Value() string { return i.value }
 
-// form.Input("checkbox", "name", "value")
-
-func (i *ToggledInput) Set(selector string, attributes map[string]string) *ToggledInput {
-	i.attrs = hy.ParseAttributes(selector, attributes)
-	return i
+func (i *ToggledInput) ErrMsgs() []string {
+	return i.form.inputErrMsgs[i.name]
 }
 
 func (i *ToggledInput) Check(b bool) *ToggledInput {
 	i.checked = b
 	return i
-}
-
-func (i *ToggledInput) ErrMsgs() []string {
-	return i.form.inputErrMsgs[i.name]
 }
 
 func (i *ToggledInput) Checked() bool {
@@ -238,11 +233,7 @@ func (i *ToggledInputs) Values() []string {
 	return i.form.request.Form[i.name]
 }
 
-type Opt interface {
-	hy.Element
-	Opt()
-}
-type Opts []Opt
+type Options []Option
 
 type Option struct {
 	Value      string
@@ -251,9 +242,9 @@ type Option struct {
 	Selected   bool
 	Selector   string
 	Attributes map[string]string
+	Optgroup   string
+	Options    Options
 }
-
-func (o Option) Opt() {}
 
 func (o Option) AppendHTML(buf *strings.Builder) error {
 	attrs := hy.ParseAttributes(o.Selector, o.Attributes)
@@ -272,64 +263,81 @@ func (o Option) AppendHTML(buf *strings.Builder) error {
 	return nil
 }
 
-type OptGroup struct {
-	Label      string
-	Disabled   bool
-	Options    []Option
-	Selector   string
-	Attributes map[string]string
-}
-
-func (o OptGroup) Opt() {}
-
-func (o OptGroup) AppendHTML(buf *strings.Builder) error {
-	attrs := hy.ParseAttributes(o.Selector, o.Attributes)
-	attrs.Tag = "option"
-	attrs.Dict["label"] = o.Label
-	if o.Disabled {
-		attrs.Dict["disabled"] = hy.Enabled
-	}
-	elements := make([]hy.Element, len(o.Options))
-	for i := range o.Options {
-		elements[i] = o.Options[i]
-	}
-	err := hy.AppendHTML(buf, attrs, elements)
-	if err != nil {
-		return erro.Wrap(err)
-	}
-	return nil
-}
-
 type SelectInput struct {
-	form  *Form
-	attrs hy.Attributes
-	name  string
-	Opts  Opts
+	form    *Form
+	attrs   hy.Attributes
+	name    string
+	Options Options
+}
+
+func (f *Form) Select(name string, options []Option) *SelectInput {
+	f.registerName(name, 1)
+	return &SelectInput{form: f, name: name, Options: options}
+}
+
+func (i *SelectInput) Set(selector string, attributes map[string]string) *SelectInput {
+	i.attrs = hy.ParseAttributes(selector, attributes)
+	return i
 }
 
 func (i *SelectInput) AppendHTML(buf *strings.Builder) error {
-	elements := make([]hy.Element, len(i.Opts))
-	for j := range i.Opts {
-		elements[j] = i.Opts[j]
+	if i.attrs.Dict == nil {
+		i.attrs.Dict = make(map[string]string)
 	}
-	err := hy.AppendHTML(buf, i.attrs, elements)
-	if err != nil {
-		return erro.Wrap(err)
+	if i.attrs.ParseErr != nil {
+		return erro.Wrap(i.attrs.ParseErr)
 	}
-	return nil
-}
-
-func (i *SelectInput) Options() []Option {
-	var options []Option
-	for _, opt := range i.Opts {
-		switch opt := opt.(type) {
-		case Option:
-			options = append(options, opt)
-		case OptGroup:
-			options = append(options, opt.Options...)
+	buf.WriteString(`<select`)
+	if i.attrs.ID != "" {
+		buf.WriteString(` id="` + i.attrs.ID + `"`)
+	}
+	if i.attrs.Class != "" {
+		buf.WriteString(` class="` + i.attrs.Class + `"`)
+	}
+	if i.name != "" {
+		i.attrs.Dict["name"] = i.name
+	}
+	for name, value := range i.attrs.Dict {
+		switch value {
+		case hy.Enabled:
+			buf.WriteString(` ` + name)
+		case hy.Disabled, "id", "class":
+			continue
+		default:
+			buf.WriteString(` ` + name + `="` + value + `"`)
 		}
 	}
-	return options
+	buf.WriteString(`>`)
+	var err error
+	for _, opt := range i.Options {
+		switch opt.Optgroup {
+		case "":
+			opt.AppendHTML(buf)
+		default:
+			attrs := hy.ParseAttributes(opt.Selector, opt.Attributes)
+			attrs.Tag = "optgroup"
+			attrs.Dict["label"] = opt.Optgroup
+			if opt.Disabled {
+				attrs.Dict["disabled"] = hy.Enabled
+			}
+			if opt.Selected {
+				attrs.Dict["selected"] = hy.Enabled
+			}
+			var children []hy.Element
+			for _, option := range opt.Options {
+				if len(option.Options) > 0 {
+					continue
+				}
+				children = append(children, option)
+			}
+			err = hy.AppendHTML(buf, attrs, children)
+			if err != nil {
+				return erro.Wrap(err)
+			}
+		}
+	}
+	buf.WriteString(`</select>`)
+	return nil
 }
 
 func (i *SelectInput) Values() []string {

@@ -70,7 +70,6 @@ func (p *Params) UnmarshalBinary(data []byte) error {
 	// parts[2] = v=%d
 	// parts[3] = m=%d,t=%d,p=%d,l=%d
 	// parts[4] = base64 URL encoded salt
-	// parts[5] = base64 URL encoded key (can be empty, which indicates that key should be re-derived from the above params)
 	var err error
 	parts := strings.Split(string(data), "$")
 	_, err = fmt.Sscanf(parts[2], "v=%d", &p.Argon2Version)
@@ -121,7 +120,7 @@ func CompareHashAndPassword(passwordHash []byte, password []byte) error {
 		return err
 	}
 	if subtle.ConstantTimeCompare(providedKey, derivedKey) != 1 {
-		return fmt.Errorf("password is invalid")
+		return fmt.Errorf("incorrect password")
 	}
 	return nil
 }
