@@ -288,25 +288,7 @@ func (i *SelectInput) AppendHTML(buf *strings.Builder) error {
 		return erro.Wrap(i.attrs.ParseErr)
 	}
 	buf.WriteString(`<select`)
-	if i.attrs.ID != "" {
-		buf.WriteString(` id="` + i.attrs.ID + `"`)
-	}
-	if i.attrs.Class != "" {
-		buf.WriteString(` class="` + i.attrs.Class + `"`)
-	}
-	if i.name != "" {
-		i.attrs.Dict["name"] = i.name
-	}
-	for name, value := range i.attrs.Dict {
-		switch value {
-		case hy.Enabled:
-			buf.WriteString(` ` + name)
-		case hy.Disabled, "id", "class":
-			continue
-		default:
-			buf.WriteString(` ` + name + `="` + value + `"`)
-		}
-	}
+	hy.AppendAttributes(buf, i.attrs)
 	buf.WriteString(`>`)
 	var err error
 	for _, opt := range i.Options {

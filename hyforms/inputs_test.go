@@ -1,7 +1,7 @@
 package hyforms
 
 import (
-	"fmt"
+	"html/template"
 	"testing"
 
 	"github.com/bokwoon95/pagemanager/hy"
@@ -31,8 +31,23 @@ func Test_SelectInput(t *testing.T) {
 			}},
 		})
 		sel.Set("#my-select", nil)
-		s, err := hy.MarshalElement(nil, sel)
+		got, err := hy.MarshalElement(nil, sel)
 		is.NoErr(err)
-		fmt.Println(s)
+		want := `<select id="my-select">` +
+			`<option value="0">Option 0</option>` +
+			`<optgroup label="Group 1">` +
+			`<option value="1.1">Option 1.1</option>` +
+			`</optgroup>` +
+			`<optgroup label="Group 2">` +
+			`<option value="2.1">Option 2.1</option>` +
+			`<option value="2.2">Option 2.2</option>` +
+			`</optgroup>` +
+			`<optgroup label="Group 3">` +
+			`<option value="3.1">Option 3.1</option>` +
+			`<option value="3.2">Option 3.2</option>` +
+			`<option value="3.3">Option 3.3</option>` +
+			`</optgroup>` +
+			`</select>`
+		is.Equal(template.HTML(want), got)
 	})
 }

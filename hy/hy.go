@@ -4,6 +4,7 @@ package hy
 import (
 	"fmt"
 	"html/template"
+	"sort"
 	"strings"
 	"sync"
 
@@ -234,22 +235,7 @@ func AppendHTML(buf *strings.Builder, attrs Attributes, children []Element) erro
 	} else {
 		buf.WriteString(`<div`)
 	}
-	if attrs.ID != "" {
-		buf.WriteString(` id="` + attrs.ID + `"`)
-	}
-	if attrs.Class != "" {
-		buf.WriteString(` class="` + attrs.Class + `"`)
-	}
-	for name, value := range attrs.Dict {
-		switch value {
-		case Enabled:
-			buf.WriteString(` ` + name)
-		case Disabled, "id", "class":
-			continue
-		default:
-			buf.WriteString(` ` + name + `="` + value + `"`)
-		}
-	}
+	AppendAttributes(buf, attrs)
 	buf.WriteString(`>`)
 	if _, ok := singletonElements[strings.ToUpper(attrs.Tag)]; !ok {
 		for _, child := range children {
@@ -261,6 +247,35 @@ func AppendHTML(buf *strings.Builder, attrs Attributes, children []Element) erro
 		buf.WriteString("</" + attrs.Tag + ">")
 	}
 	return nil
+}
+
+func AppendAttributes(buf *strings.Builder, attrs Attributes) {
+	if attrs.ID != "" {
+		buf.WriteString(` id="` + attrs.ID + `"`)
+	}
+	if attrs.Class != "" {
+		buf.WriteString(` class="` + attrs.Class + `"`)
+	}
+	var names []string
+	for name := range attrs.Dict {
+		switch name {
+		case "id", "class": // skip
+		default:
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		value := attrs.Dict[name]
+		switch value {
+		case Enabled:
+			buf.WriteString(` ` + name)
+		case Disabled:
+			continue
+		default:
+			buf.WriteString(` ` + name + `="` + value + `"`)
+		}
+	}
 }
 
 func MarshalElement(s Sanitizer, el Element) (template.HTML, error) {
