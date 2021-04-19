@@ -3,7 +3,9 @@ package pagemanager
 import (
 	"errors"
 	"fmt"
+	"html/template"
 	"io/fs"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -186,4 +188,73 @@ func (t *theme) Unmarshal(data interface{}) {
 		}
 		t.themeTemplates[templateName] = tt
 	}
+}
+
+func (pm *PageManager) serveTemplate(w http.ResponseWriter, r *http.Request, route Route) {
+	pm.themesMutex.RLock()
+	theme, ok := pm.themes[route.ThemePath.String]
+	pm.themesMutex.RUnlock()
+	if !ok {
+		http.Error(w, erro.Sdump(fmt.Errorf("No such theme called %s", route.ThemePath.String)), http.StatusInternalServerError)
+		return
+	}
+	if theme.err != nil {
+		http.Error(w, erro.Sdump(theme.err), http.StatusInternalServerError)
+		return
+	}
+	themeTemplate, ok := theme.themeTemplates[route.Template.String]
+	if !ok {
+		http.Error(w, erro.Sdump(fmt.Errorf("No such template called %s for theme %s", route.Template.String, route.ThemePath.String)), http.StatusInternalServerError)
+		return
+	}
+	if len(themeTemplate.HTML) == 0 {
+		http.Error(w, erro.Sdump(fmt.Errorf("template has no HTML files")), http.StatusInternalServerError)
+		return
+	}
+	type Data struct {
+		Page              PageData
+		TemplateVariables map[string]interface{}
+	}
+	t := template.New("").Funcs(pm.funcmap())
+	datafolderFS := os.DirFS(pm.datafolder)
+	for _, filename := range themeTemplate.HTML {
+		filename = strings.TrimPrefix(filename, "/")
+		b, err := fs.ReadFile(datafolderFS, filename)
+		if err != nil {
+			http.Error(w, erro.Sdump(err), http.StatusInternalServerError)
+			return
+		}
+		_, err = t.New(filename).Parse(string(b))
+		if err != nil {
+			http.Error(w, erro.Sdump(err), http.StatusInternalServerError)
+			return
+		}
+	}
+	t = t.Lookup(strings.TrimPrefix(themeTemplate.HTML[0], "/"))
+	data := Data{
+		Page: PageData{
+			Ctx:       r.Context(),
+			URL:       route.URL.String,
+			DataID:    route.URL.String,
+			cssAssets: themeTemplate.CSS,
+			jsAssets:  themeTemplate.JS,
+			csp:       themeTemplate.ContentSecurityPolicy,
+		},
+		TemplateVariables: themeTemplate.TemplateVariables,
+	}
+	data.Page.LocaleCode, _ = r.Context().Value(ctxKeyLocaleCode).(string)
+	switch r.FormValue(queryparamEditMode) {
+	case EditModeBasic:
+		data.Page.EditMode = EditModeBasic
+		data.Page.cssAssets = append(data.Page.cssAssets, Asset{Path: "/pm-plugins/pagemanager/editmode.css"})
+		data.Page.jsAssets = append(data.Page.jsAssets, Asset{Path: "/pm-plugins/pagemanager/editmode.js"})
+	case EditModeAdvanced:
+		data.Page.EditMode = EditModeAdvanced
+	}
+	err := t.Execute(w, data)
+	if err != nil {
+		http.Error(w, erro.Sdump(err), http.StatusInternalServerError)
+		return
+	}
+	return
 }

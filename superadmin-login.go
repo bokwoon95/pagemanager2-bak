@@ -44,7 +44,7 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		user := pm.getUser(w, r)
 		if user.HasRole(roleSuperadmin) {
-			http.Redirect(w, r, URLDashboard, http.StatusMovedPermanently)
+			http.Redirect(w, r, LocaleURL(r, URLDashboard), http.StatusMovedPermanently)
 			return
 		}
 		templateData := templates.CenterForm{
@@ -56,7 +56,7 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
 			return
 		}
-		err = executeTemplates(w, templateData, pagemanagerFS, "templates/center-form.html")
+		err = pm.executeTemplates(w, templateData, pagemanagerFS, "templates/center-form.html")
 		if err != nil {
 			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
 			return
@@ -81,10 +81,10 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 		var redirectURL string
 		_ = hyforms.GetCookieValue(w, r, cookieSuperadminLoginRedirect, &redirectURL)
 		if redirectURL != "" {
-			http.Redirect(w, r, redirectURL, http.StatusMovedPermanently)
+			http.Redirect(w, r, LocaleURL(r, redirectURL), http.StatusMovedPermanently)
 			return
 		}
-		http.Redirect(w, r, URLDashboard, http.StatusMovedPermanently)
+		http.Redirect(w, r, LocaleURL(r, URLDashboard), http.StatusMovedPermanently)
 	default:
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 	}

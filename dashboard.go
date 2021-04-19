@@ -17,10 +17,10 @@ func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 		user := pm.getUser(w, r)
 		if !user.HasPagePerms(PagePermsRead) {
 			_ = hyforms.SetCookieValue(w, cookieSuperadminLoginRedirect, r.URL.Path, nil)
-			http.Redirect(w, r, URLSuperadminLogin, http.StatusMovedPermanently)
+			http.Redirect(w, r, LocaleURL(r, URLSuperadminLogin), http.StatusMovedPermanently)
 			return
 		}
-		err = executeTemplates(w, nil, pagemanagerFS, "dashboard.html")
+		err = pm.executeTemplates(w, nil, pagemanagerFS, "dashboard.html")
 		if err != nil {
 			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
 			return

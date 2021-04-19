@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -127,12 +128,6 @@ func (pm *PageManager) getKeys() (keys [][]byte, err error) {
 	return keys, nil
 }
 
-type ctxKey string
-
-const (
-	ctxKeyUser ctxKey = "user"
-)
-
 func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/", next)
@@ -140,15 +135,26 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 	mux.HandleFunc(URLDashboard, pm.dashboard)
 	mux.HandleFunc("/pm-test-encrypt", pm.testEncrypt)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user, err := pm.getSession(w, r)
-		if err == nil {
-			r = r.WithContext(context.WithValue(r.Context(), ctxKeyUser, user))
-		}
 		if strings.HasPrefix(r.URL.Path, "/pm-themes/") ||
 			strings.HasPrefix(r.URL.Path, "/pm-images/") ||
 			strings.HasPrefix(r.URL.Path, "/pm-plugins/pagemanager/") {
 			pm.serveFile(w, r, r.URL.Path)
 			return
+		}
+		route, localeCode, err := pm.getRoute(r.Context(), r.URL.Path)
+		if err != nil {
+			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			return
+		}
+		r2 := &http.Request{} // r2 is like r, but with the localeCode stripped from the URL and injected into the request context
+		*r2 = *r
+		r2 = r2.WithContext(context.WithValue(r2.Context(), ctxKeyLocaleCode, localeCode))
+		r2.URL = &url.URL{}
+		*r2.URL = *r.URL
+		r2.URL.Path = route.URL.String
+		user, err := pm.getSession(w, r)
+		if err == nil {
+			r2 = r2.WithContext(context.WithValue(r2.Context(), ctxKeyUser, user))
 		}
 		switch {
 		case !*flagNoSetup:
@@ -167,11 +173,42 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 				}
 				break
 			}
-			pm.superadminSetup(w, r)
+			pm.superadminSetup(w, r2)
 			return
 		}
-		mux.ServeHTTP(w, r)
+		if route.Disabled.Valid && route.Disabled.Bool {
+			http.NotFound(w, r)
+			return
+		}
+		if route.HandlerURL.Valid {
+			r2.URL.Path = route.HandlerURL.String
+			mux.ServeHTTP(w, r2)
+			return
+		}
+		if route.Content.Valid {
+			io.WriteString(w, route.Content.String)
+			return
+		}
+		if route.ThemePath.Valid && route.Template.Valid {
+			pm.serveTemplate(w, r2, route)
+			return
+		}
+		mux.ServeHTTP(w, r2)
 	})
+}
+
+func LocaleURL(r *http.Request, url string) string {
+	var path string
+	if url == "" {
+		path = r.URL.Path
+	} else if strings.HasPrefix(url, "/") {
+		path = url
+	}
+	localeCode, _ := r.Context().Value(ctxKeyLocaleCode).(string)
+	if localeCode == "" {
+		return path
+	}
+	return "/" + localeCode + path
 }
 
 func (pm *PageManager) superadminDBL() sq.DB {
@@ -255,12 +292,12 @@ func (pm *PageManager) serveFile(w http.ResponseWriter, r *http.Request, name st
 	http.ServeContent(w, r, name, info.ModTime(), fseeker)
 }
 
-func executeTemplates(w http.ResponseWriter, data interface{}, fsys fs.FS, file string, files ...string) error {
+func (pm *PageManager) executeTemplates(w http.ResponseWriter, data interface{}, fsys fs.FS, file string, files ...string) error {
 	b, err := fs.ReadFile(fsys, file)
 	if err != nil {
 		return erro.Wrap(err)
 	}
-	t, err := template.New(file).Funcs(map[string]interface{}{}).Parse(string(b)) // TODO: pm.funcmap()
+	t, err := template.New(file).Funcs(pm.funcmap()).Parse(string(b))
 	if err != nil {
 		return erro.Wrap(err)
 	}
@@ -287,6 +324,55 @@ func executeTemplates(w http.ResponseWriter, data interface{}, fsys fs.FS, file 
 	return nil
 }
 
+func (pm *PageManager) getRoute(ctx context.Context, path string) (route Route, localeCode string, err error) {
+	elems := strings.SplitN(path, "/", 3) // because first character of path is always '/', we ignore the first element
+	if len(elems) >= 2 {
+		head := elems[1]
+		pm.localesMutex.RLock()
+		_, ok := pm.locales[head]
+		pm.localesMutex.RUnlock()
+		if ok {
+			localeCode = head
+			if len(elems) >= 3 {
+				path = "/" + elems[2]
+			} else {
+				path = "/"
+			}
+		}
+	}
+	var negapath string
+	if strings.HasSuffix(path, "/") {
+		negapath = strings.TrimRight(path, "/")
+	} else {
+		negapath = path + "/"
+	}
+	p := tables.NEW_PAGES(ctx, "p")
+	_, err = sq.Fetch(pm.dataDB, sq.SQLite.
+		From(p).
+		Where(p.URL.In([]string{path, negapath})).
+		OrderBy(sq.Case(p.URL).When(path, 1).Else(2)).
+		Limit(1),
+		func(row *sq.Row) error {
+			route.URL = row.NullString(p.URL)
+			route.Disabled = row.NullBool(p.DISABLED)
+			route.RedirectURL = row.NullString(p.REDIRECT_URL)
+			route.HandlerURL = row.NullString(p.HANDLER_URL)
+			route.Content = row.NullString(p.CONTENT)
+			route.ThemePath = row.NullString(p.THEME_PATH)
+			route.Template = row.NullString(p.TEMPLATE)
+			return nil
+		},
+	)
+	if err != nil {
+		return route, localeCode, erro.Wrap(err)
+	}
+	if !route.URL.Valid {
+		route.URL.String = path
+		route.URL.Valid = true
+	}
+	return route, localeCode, nil
+}
+
 func (pm *PageManager) testEncrypt(w http.ResponseWriter, r *http.Request) {
 	user := pm.getUser(w, r)
 	if user.Valid {
@@ -296,7 +382,7 @@ func (pm *PageManager) testEncrypt(w http.ResponseWriter, r *http.Request) {
 	if !pm.boxesInitialized() {
 		_ = hyforms.SetCookieValue(w, cookieSuperadminLoginRedirect, r.URL.Path, nil)
 		noCache(w)
-		http.Redirect(w, r, URLSuperadminLogin, http.StatusMovedPermanently)
+		http.Redirect(w, r, LocaleURL(r, URLSuperadminLogin), http.StatusMovedPermanently)
 		return
 	}
 	// privateBox
