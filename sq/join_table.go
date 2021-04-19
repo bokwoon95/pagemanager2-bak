@@ -72,15 +72,22 @@ func (join JoinTable) AppendSQL(dialect string, buf *strings.Builder, args *[]in
 		join.JoinType = JoinTypeInner
 	}
 	buf.WriteString(string(join.JoinType) + " ")
+	var err error
 	switch v := join.Table.(type) {
 	case nil:
 		buf.WriteString("NULL")
 	case Subquery:
 		buf.WriteString("(")
-		_ = v.AppendSQL("", buf, args, nil)
+		err = v.AppendSQL("", buf, args, nil)
+		if err != nil {
+			return err
+		}
 		buf.WriteString(")")
 	default:
-		_ = v.AppendSQL("", buf, args, nil)
+		err = v.AppendSQL("", buf, args, nil)
+		if err != nil {
+			return err
+		}
 	}
 	if join.Table != nil {
 		alias := join.Table.GetAlias()
@@ -92,7 +99,10 @@ func (join JoinTable) AppendSQL(dialect string, buf *strings.Builder, args *[]in
 	if len(join.OnPredicates.Predicates) > 0 {
 		buf.WriteString(" ON ")
 		join.OnPredicates.Toplevel = true
-		_ = join.OnPredicates.AppendSQLExclude("", buf, args, nil, nil)
+		err = join.OnPredicates.AppendSQLExclude("", buf, args, nil, nil)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -100,11 +110,15 @@ func (join JoinTable) AppendSQL(dialect string, buf *strings.Builder, args *[]in
 type JoinTables []JoinTable
 
 func (joins JoinTables) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+	var err error
 	for i, join := range joins {
 		if i > 0 {
 			buf.WriteString(" ")
 		}
-		_ = join.AppendSQL(dialect, buf, args, nil)
+		err = join.AppendSQL(dialect, buf, args, nil)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

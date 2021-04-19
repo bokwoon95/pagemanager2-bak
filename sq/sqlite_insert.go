@@ -26,6 +26,7 @@ type SQLiteInsertQuery struct {
 type SQLiteInsertConflict struct{ insertQuery *SQLiteInsertQuery }
 
 func (q SQLiteInsertQuery) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+	var err error
 	var excludedTableQualifiers []string
 	if q.ColumnMapper != nil {
 		col := NewColumn(ColumnModeInsert)
@@ -43,10 +44,12 @@ func (q SQLiteInsertQuery) AppendSQL(dialect string, buf *strings.Builder, args 
 			tbl = q.SelectQuery.FromTable
 			jointbls = q.SelectQuery.JoinTables
 		}
-		_ = q.CTEs.AppendCTEs(dialect, buf, args, params, tbl, jointbls)
+		err = q.CTEs.AppendCTEs(dialect, buf, args, params, tbl, jointbls)
+		if err != nil {
+			return err
+		}
 	}
 	// INSERT INTO
-	var err error
 	buf.WriteString("INSERT INTO ")
 	if q.IntoTable == nil {
 		buf.WriteString("NULL")
@@ -67,38 +70,59 @@ func (q SQLiteInsertQuery) AppendSQL(dialect string, buf *strings.Builder, args 
 	}
 	if len(q.InsertColumns) > 0 {
 		buf.WriteString(" (")
-		_ = q.InsertColumns.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
+		err = q.InsertColumns.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
+		if err != nil {
+			return err
+		}
 		buf.WriteString(")")
 	}
 	// VALUES/SELECT
 	switch {
 	case len(q.RowValues) > 0:
 		buf.WriteString(" VALUES ")
-		_ = q.RowValues.AppendSQL("", buf, args, nil)
+		err = q.RowValues.AppendSQL("", buf, args, nil)
+		if err != nil {
+			return err
+		}
 	case q.SelectQuery != nil:
 		buf.WriteString(" ")
-		_ = q.SelectQuery.AppendSQL("", buf, args, nil)
+		err = q.SelectQuery.AppendSQL("", buf, args, nil)
+		if err != nil {
+			return err
+		}
 	}
 	// ON CONFLICT
 	if q.HandleConflict {
 		buf.WriteString(" ON CONFLICT")
 		if len(q.ConflictFields) > 0 {
 			buf.WriteString(" (")
-			_ = q.ConflictFields.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
+			err = q.ConflictFields.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
+			if err != nil {
+				return err
+			}
 			buf.WriteString(")")
 			if len(q.ConflictPredicate.Predicates) > 0 {
 				buf.WriteString(" WHERE ")
 				q.ConflictPredicate.Toplevel = true
-				_ = q.ConflictPredicate.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
+				err = q.ConflictPredicate.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		if len(q.Resolution) > 0 {
 			buf.WriteString(" DO UPDATE SET ")
-			_ = q.Resolution.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
+			err = q.Resolution.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
+			if err != nil {
+				return err
+			}
 			if len(q.ResolutionPredicate.Predicates) > 0 {
 				buf.WriteString(" WHERE ")
 				q.ResolutionPredicate.Toplevel = true
-				_ = q.ResolutionPredicate.AppendSQLExclude("", buf, args, params, nil)
+				err = q.ResolutionPredicate.AppendSQLExclude("", buf, args, params, nil)
+				if err != nil {
+					return err
+				}
 			}
 		} else {
 			buf.WriteString(" DO NOTHING")

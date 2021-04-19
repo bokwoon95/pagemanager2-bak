@@ -17,31 +17,33 @@ func Test_CTE(t *testing.T) {
 	}
 
 	assertCTE := func(t *testing.T, tt TT) {
-		Is := testutil.New(t)
+		is := testutil.New(t)
 		buf1, buf2 := &strings.Builder{}, &strings.Builder{}
 		var args1, args2 []interface{}
 
 		// cte1 "fields"
 		cte1 := NewCTE(tt.q, tt.name, tt.alias1, tt.columns)
-		Is.Equal(tt.q, cte1.GetQuery())
-		Is.Equal(tt.name, cte1.GetName())
-		Is.Equal(tt.alias1, cte1.GetAlias())
-		Is.Equal(tt.columns, cte1.GetColumns())
-		Is.Equal(false, cte1.IsRecursive())
+		is.Equal(tt.q, cte1.GetQuery())
+		is.Equal(tt.name, cte1.GetName())
+		is.Equal(tt.alias1, cte1.GetAlias())
+		is.Equal(tt.columns, cte1.GetColumns())
+		is.Equal(false, cte1.IsRecursive())
 		// cte1.AppendSQL
-		_ = cte1.AppendSQL("", buf1, &args1, make(map[string]int))
-		Is.Equal(tt.name, buf1.String())
+		err := cte1.AppendSQL("", buf1, &args1, make(map[string]int))
+		is.NoErr(err)
+		is.Equal(tt.name, buf1.String())
 
 		// cte2 "fields"
 		cte2 := cte1.As(tt.alias2)
-		Is.Equal(tt.q, cte2.GetQuery())
-		Is.Equal(tt.name, cte2.GetName())
-		Is.Equal(tt.alias2, cte2.GetAlias())
-		Is.Equal(tt.columns, cte2.GetColumns())
-		Is.Equal(false, cte2.IsRecursive())
+		is.Equal(tt.q, cte2.GetQuery())
+		is.Equal(tt.name, cte2.GetName())
+		is.Equal(tt.alias2, cte2.GetAlias())
+		is.Equal(tt.columns, cte2.GetColumns())
+		is.Equal(false, cte2.IsRecursive())
 		// cte2.AppendSQL
-		_ = cte2.AppendSQL("", buf2, &args2, make(map[string]int))
-		Is.Equal(tt.name, buf2.String())
+		err = cte2.AppendSQL("", buf2, &args2, make(map[string]int))
+		is.NoErr(err)
+		is.Equal(tt.name, buf2.String())
 
 		if len(tt.columns) == 0 {
 			return
@@ -53,21 +55,23 @@ func Test_CTE(t *testing.T) {
 		args2 = args2[:0]
 
 		// cte1 column
-		_ = cte1[column].AppendSQLExclude("", buf1, &args1, make(map[string]int), nil)
+		err = cte1[column].AppendSQLExclude("", buf1, &args1, make(map[string]int), nil)
+		is.NoErr(err)
 		prefix1 := tt.name
 		if tt.alias1 != "" {
 			prefix1 = tt.alias1
 		}
-		Is.Equal(prefix1+"."+column, buf1.String())
-		Is.Equal(0, len(args1))
+		is.Equal(prefix1+"."+column, buf1.String())
+		is.Equal(0, len(args1))
 		// cte2 column
-		_ = cte2[column].AppendSQLExclude("", buf2, &args2, make(map[string]int), nil)
+		err = cte2[column].AppendSQLExclude("", buf2, &args2, make(map[string]int), nil)
+		is.NoErr(err)
 		prefix2 := tt.name
 		if tt.alias2 != "" {
 			prefix2 = tt.alias2
 		}
-		Is.Equal(prefix2+"."+column, buf2.String())
-		Is.Equal(0, len(args2))
+		is.Equal(prefix2+"."+column, buf2.String())
+		is.Equal(0, len(args2))
 	}
 	t.Run("cte1 unaliased, cte2 aliased", func(t *testing.T) {
 		tt := TT{
@@ -101,24 +105,24 @@ func Test_CTEs(t *testing.T) {
 	}
 
 	assertCTEs := func(t *testing.T, tt TT) {
-		Is := testutil.New(t)
+		is := testutil.New(t)
 		buf := &strings.Builder{}
 		var args []interface{}
 		_ = tt.ctes.AppendCTEs("", buf, &args, make(map[string]int), tt.fromTable, tt.joinTables)
-		Is.Equal(tt.wantQuery, buf.String())
-		Is.Equal(tt.wantArgs, args)
+		is.Equal(tt.wantQuery, buf.String())
+		is.Equal(tt.wantArgs, args)
 	}
 	t.Run("empty", func(t *testing.T) {
 		var tt TT
 		tt.ctes = CTEs{}
 		tt.wantQuery = ""
 		assertCTEs(t, tt)
-		Is := testutil.New(t)
+		is := testutil.New(t)
 		cte := CTE{}
-		Is.Equal(nil, cte.GetQuery())
-		Is.Equal("", cte.GetName())
-		Is.Equal("", cte.GetAlias())
-		Is.Equal([]string(nil), cte.GetColumns())
+		is.Equal(nil, cte.GetQuery())
+		is.Equal("", cte.GetName())
+		is.Equal("", cte.GetAlias())
+		is.Equal([]string(nil), cte.GetColumns())
 	})
 	t.Run("basic", func(t *testing.T) {
 		var tt TT

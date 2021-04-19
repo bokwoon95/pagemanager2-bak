@@ -22,10 +22,14 @@ func fieldliterals(fields ...string) []Field {
 }
 
 func (q querylite) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+	var err error
 	if q.readQuery != "" {
 		if len(q.fields) > 0 {
 			buf.WriteString("SELECT ")
-			_ = q.fields.AppendSQLExcludeWithAlias(dialect, buf, args, make(map[string]int), nil)
+			err = q.fields.AppendSQLExcludeWithAlias(dialect, buf, args, make(map[string]int), nil)
+			if err != nil {
+				return err
+			}
 			buf.WriteString(" ")
 		}
 		buf.WriteString(q.readQuery)
@@ -35,15 +39,24 @@ func (q querylite) AppendSQL(dialect string, buf *strings.Builder, args *[]inter
 	if q.writeQuery != "" {
 		buf.WriteString(q.writeQuery)
 		*args = append(*args, q.args...)
-		_ = q.fields.AppendSQLExcludeWithAlias(dialect, buf, args, make(map[string]int), nil)
+		err = q.fields.AppendSQLExcludeWithAlias(dialect, buf, args, make(map[string]int), nil)
+		if err != nil {
+			return err
+		}
 		if len(q.fields) > 0 {
 			buf.WriteString(" RETURNING ")
-			_ = q.fields.AppendSQLExcludeWithAlias(dialect, buf, args, make(map[string]int), nil)
+			err = q.fields.AppendSQLExcludeWithAlias(dialect, buf, args, make(map[string]int), nil)
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	}
 	buf.WriteString("SELECT ")
-	_ = q.fields.AppendSQLExcludeWithAlias(dialect, buf, args, make(map[string]int), nil)
+	err = q.fields.AppendSQLExcludeWithAlias(dialect, buf, args, make(map[string]int), nil)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 func (q querylite) ToSQL() (query string, args []interface{}, params map[string]int, err error) {

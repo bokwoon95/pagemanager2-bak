@@ -36,6 +36,7 @@ type PostgresSelectQuery struct {
 }
 
 func (q PostgresSelectQuery) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+	var err error
 	// WITH
 	if len(q.CTEs) > 0 {
 		_ = q.CTEs.AppendCTEs(dialect, buf, args, params, q.FromTable, q.JoinTables)
@@ -47,12 +48,18 @@ func (q PostgresSelectQuery) AppendSQL(dialect string, buf *strings.Builder, arg
 	buf.WriteString(string(q.SelectType))
 	if q.SelectType == SelectTypeDistinctOn {
 		buf.WriteString(" (")
-		_ = q.DistinctOn.AppendSQLExclude("", buf, args, params, nil)
+		err = q.DistinctOn.AppendSQLExclude("", buf, args, params, nil)
+		if err != nil {
+			return err
+		}
 		buf.WriteString(")")
 	}
 	if len(q.SelectFields) > 0 {
 		buf.WriteString(" ")
-		_ = q.SelectFields.AppendSQLExcludeWithAlias("", buf, args, params, nil)
+		err = q.SelectFields.AppendSQLExcludeWithAlias("", buf, args, params, nil)
+		if err != nil {
+			return err
+		}
 	}
 	// FROM
 	if q.FromTable != nil {
@@ -60,10 +67,16 @@ func (q PostgresSelectQuery) AppendSQL(dialect string, buf *strings.Builder, arg
 		switch v := q.FromTable.(type) {
 		case Query:
 			buf.WriteString("(")
-			_ = v.AppendSQL("", buf, args, nil)
+			err = v.AppendSQL("", buf, args, nil)
+			if err != nil {
+				return err
+			}
 			buf.WriteString(")")
 		default:
-			_ = v.AppendSQL("", buf, args, nil)
+			err = v.AppendSQL("", buf, args, nil)
+			if err != nil {
+				return err
+			}
 		}
 		alias := q.FromTable.GetAlias()
 		if alias != "" {
@@ -74,34 +87,52 @@ func (q PostgresSelectQuery) AppendSQL(dialect string, buf *strings.Builder, arg
 	// JOIN
 	if len(q.JoinTables) > 0 {
 		buf.WriteString(" ")
-		_ = q.JoinTables.AppendSQL("", buf, args, params)
+		err = q.JoinTables.AppendSQL("", buf, args, params)
+		if err != nil {
+			return err
+		}
 	}
 	// WHERE
 	if len(q.WherePredicate.Predicates) > 0 {
 		buf.WriteString(" WHERE ")
 		q.WherePredicate.Toplevel = true
-		_ = q.WherePredicate.AppendSQLExclude("", buf, args, params, nil)
+		err = q.WherePredicate.AppendSQLExclude("", buf, args, params, nil)
+		if err != nil {
+			return err
+		}
 	}
 	// GROUP BY
 	if len(q.GroupByFields) > 0 {
 		buf.WriteString(" GROUP BY ")
-		_ = q.GroupByFields.AppendSQLExclude("", buf, args, params, nil)
+		err = q.GroupByFields.AppendSQLExclude("", buf, args, params, nil)
+		if err != nil {
+			return err
+		}
 	}
 	// HAVING
 	if len(q.HavingPredicate.Predicates) > 0 {
 		buf.WriteString(" HAVING ")
 		q.HavingPredicate.Toplevel = true
-		_ = q.HavingPredicate.AppendSQLExclude("", buf, args, params, nil)
+		err = q.HavingPredicate.AppendSQLExclude("", buf, args, params, nil)
+		if err != nil {
+			return err
+		}
 	}
 	// WINDOW
 	if len(q.Windows) > 0 {
 		buf.WriteString(" WINDOW ")
-		_ = q.Windows.AppendSQL("", buf, args, params)
+		err = q.Windows.AppendSQL("", buf, args, params)
+		if err != nil {
+			return err
+		}
 	}
 	// ORDER BY
 	if len(q.OrderByFields) > 0 {
 		buf.WriteString(" ORDER BY ")
-		_ = q.OrderByFields.AppendSQLExclude("", buf, args, params, nil)
+		err = q.OrderByFields.AppendSQLExclude("", buf, args, params, nil)
+		if err != nil {
+			return err
+		}
 	}
 	// LIMIT
 	if q.LimitValid {

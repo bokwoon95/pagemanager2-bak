@@ -153,7 +153,7 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
 			return
 		}
-		http.Redirect(w, r, "/pm-superadmin/login", http.StatusMovedPermanently)
+		http.Redirect(w, r, URLSuperadminLogin, http.StatusMovedPermanently)
 	default:
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 	}

@@ -17,9 +17,12 @@ func (f BlobField) As(alias string) BlobField {
 	return f
 }
 
-func (f BlobField) Asc() BlobField        { f.field.asc(); return f }
-func (f BlobField) Desc() BlobField       { f.field.desc(); return f }
+func (f BlobField) Asc() BlobField { f.field.asc(); return f }
+
+func (f BlobField) Desc() BlobField { f.field.desc(); return f }
+
 func (f BlobField) NullsFirst() BlobField { f.field.nullsFirst(); return f }
-func (f BlobField) NullsLast() BlobField  { f.field.nullsLast(); return f }
+
+func (f BlobField) NullsLast() BlobField { f.field.nullsLast(); return f }
 
 func (f BlobField) SetBlob(val []byte) Assignment { return Assign(f, val) }

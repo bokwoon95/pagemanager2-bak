@@ -80,7 +80,7 @@ func getThemes(datafolder string) (themes map[string]theme, fallbackAssetsIndex 
 			return fs.SkipDir
 		}
 		t.Unmarshal(res.Export())
-		for asset, _ := range t.fallbackAssets {
+		for asset := range t.fallbackAssets {
 			if _, ok := fallbackAssetsIndex[asset]; ok {
 				return erro.Wrap(fmt.Errorf(`fallback already declared for asset "%s"`, asset))
 			}

@@ -14,17 +14,18 @@ func Test_BooleanField(t *testing.T) {
 		wantArgs                []interface{}
 	}
 
+	var _ Field = BooleanField{}
 	assertField := func(t *testing.T, f BooleanField, tt TT) {
-		Is := testutil.New(t)
-		var _ Field = f
+		is := testutil.New(t)
 		buf := &strings.Builder{}
 		var args []interface{}
-		_ = f.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
-		Is.Equal(tt.wantQuery, buf.String())
-		Is.Equal(f.alias, f.GetAlias())
-		Is.Equal(f.name, f.GetName())
+		err := f.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
+		is.NoErr(err)
+		is.Equal(tt.wantQuery, buf.String())
+		is.Equal(f.alias, f.GetAlias())
+		is.Equal(f.name, f.GetName())
 		if len(tt.excludedTableQualifiers) == 0 {
-			Is.Equal(f.String(), buf.String())
+			is.Equal(f.String(), buf.String())
 		}
 	}
 	t.Run("BooleanField", func(t *testing.T) {
@@ -59,12 +60,13 @@ func Test_BooleanField(t *testing.T) {
 	})
 
 	assertPredicate := func(t *testing.T, p Predicate, tt TT) {
-		Is := testutil.New(t)
+		is := testutil.New(t)
 		buf := &strings.Builder{}
 		var args []interface{}
-		_ = p.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
-		Is.Equal(tt.wantQuery, buf.String())
-		Is.Equal(tt.wantArgs, args)
+		err := p.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
+		is.NoErr(err)
+		is.Equal(tt.wantQuery, buf.String())
+		is.Equal(tt.wantArgs, args)
 	}
 	t.Run("NOT", func(t *testing.T) {
 		f := NewBooleanField("my_field", TableInfo{Name: "my_table", Alias: "tbl"})
@@ -93,12 +95,13 @@ func Test_BooleanField(t *testing.T) {
 	})
 
 	assertAssignment := func(t *testing.T, a Assignment, tt TT) {
-		Is := testutil.New(t)
+		is := testutil.New(t)
 		buf := &strings.Builder{}
 		var args []interface{}
-		_ = a.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
-		Is.Equal(tt.wantQuery, buf.String())
-		Is.Equal(tt.wantArgs, args)
+		err := a.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
+		is.NoErr(err)
+		is.Equal(tt.wantQuery, buf.String())
+		is.Equal(tt.wantArgs, args)
 	}
 	t.Run("SetBlob", func(t *testing.T) {
 		f := NewBooleanField("my_field", TableInfo{Name: "my_table", Alias: "tbl"})

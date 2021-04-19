@@ -34,8 +34,7 @@ func (f NumberField) AppendSQLExclude(dialect string, buf *strings.Builder, args
 	if f.format != "" {
 		_ = expandValues(buf, args, params, excludedTableQualifiers, f.format, f.values)
 	}
-	_ = f.field.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
-	return nil
+	return f.field.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
 }
 
 func (f NumberField) String() string {

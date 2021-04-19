@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/bokwoon95/erro"
 )
 
 type DB struct {
@@ -135,6 +133,9 @@ func fetchContext(ctx context.Context, db Queryer, q Query, rowmapper func(*Row)
 		if resultsBuf.Len() > 0 {
 			stats.ResultsPreview = resultsBuf.String()
 		}
+		if stats.Query == "" && err != nil {
+			stats.Query = buf.String() + " <STOPPED DUE TO ERROR: " + err.Error() + ">"
+		}
 		buf.Reset()
 		resultsBuf.Reset()
 		tmpbuf.Reset()
@@ -173,9 +174,12 @@ func fetchContext(ctx context.Context, db Queryer, q Query, rowmapper func(*Row)
 			for i := range r.dest {
 				tmpbuf.Reset()
 				tmpargs = tmpargs[:0]
-				_ = r.fields[i].AppendSQLExclude("", tmpbuf, &tmpargs, nil, nil)
+				err = r.fields[i].AppendSQLExclude("", tmpbuf, &tmpargs, nil, nil)
 				resultsBuf.WriteString("\n")
 				resultsBuf.WriteString(QuestionInterpolate(tmpbuf.String(), tmpargs...))
+				if err != nil {
+					resultsBuf.WriteString(" <error: " + err.Error() + ">")
+				}
 				resultsBuf.WriteString(": ")
 				appendSQLDisplay(resultsBuf, r.dest[i])
 			}
@@ -215,11 +219,16 @@ func wrapScanError(err error, row *Row) error {
 		bufpool.Put(tmpbuf)
 		argspool.Put(tmpargs)
 	}()
+	var e error
 	for i := range row.dest {
 		tmpbuf.Reset()
 		tmpargs = tmpargs[:0]
-		_ = row.fields[i].AppendSQLExclude("", tmpbuf, &tmpargs, make(map[string]int), nil)
-		buf.WriteString("\n" + strconv.Itoa(i) + ") ")
+		e = row.fields[i].AppendSQLExclude("", tmpbuf, &tmpargs, make(map[string]int), nil)
+		buf.WriteString("\n" + strconv.Itoa(i))
+		if e != nil {
+			buf.WriteString(" <error: " + e.Error() + ">")
+		}
+		buf.WriteString(") ")
 		buf.WriteString(QuestionInterpolate(tmpbuf.String(), tmpargs...))
 		buf.WriteString(" => ")
 		buf.WriteString(reflect.TypeOf(row.dest[i]).String())
@@ -285,18 +294,18 @@ func execContext(ctx context.Context, db Queryer, q Query, execFlag ExecFlag, sk
 	}
 	res, err := db.ExecContext(ctx, stats.Query, stats.Args...)
 	if err != nil {
-		return 0, 0, erro.Wrap(err)
+		return 0, 0, err
 	}
 	if res != nil && ErowsAffected&execFlag != 0 {
 		rowsAffected, err = res.RowsAffected()
 		if err != nil {
-			return 0, 0, erro.Wrap(err)
+			return 0, 0, err
 		}
 	}
 	if res != nil && ElastInsertID&execFlag != 0 {
 		lastInsertID, err = res.LastInsertId()
 		if err != nil {
-			return 0, 0, erro.Wrap(err)
+			return 0, 0, err
 		}
 	}
 	return rowsAffected, lastInsertID, nil
@@ -352,12 +361,12 @@ func existsContext(ctx context.Context, db Queryer, q Query, skip int) (exists b
 	}()
 	q, err = q.SetFetchableFields([]Field{FieldLiteral("1")})
 	if err != nil {
-		return false, erro.Wrap(err)
+		return false, err
 	}
 	buf.WriteString("SELECT EXISTS(")
 	err = q.AppendSQL("", buf, &stats.Args, make(map[string]int))
 	if err != nil {
-		return false, erro.Wrap(err)
+		return false, err
 	}
 	buf.WriteString(")")
 	stats.Query = buf.String()
@@ -366,13 +375,13 @@ func existsContext(ctx context.Context, db Queryer, q Query, skip int) (exists b
 	}
 	rows, err := db.Query(stats.Query, stats.Args...)
 	if err != nil {
-		return false, erro.Wrap(err)
+		return false, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		err = rows.Scan(&exists)
 		if err != nil {
-			return false, erro.Wrap(err)
+			return false, err
 		}
 		break
 	}

@@ -17,21 +17,33 @@ type PredicateCases struct {
 }
 
 func (f PredicateCases) GetAlias() string { return f.alias }
-func (f PredicateCases) GetName() string  { return "" }
+
+func (f PredicateCases) GetName() string { return "" }
+
 func (f PredicateCases) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
 	buf.WriteString("CASE")
+	var err error
 	for _, Case := range f.cases {
 		buf.WriteString(" WHEN ")
-		_ = appendSQLValue(buf, args, params, excludedTableQualifiers, Case.condition)
+		err = appendSQLValue(buf, args, params, excludedTableQualifiers, Case.condition)
+		if err != nil {
+			return err
+		}
 		buf.WriteString(" THEN ")
-		_ = appendSQLValue(buf, args, params, excludedTableQualifiers, Case.result)
+		err = appendSQLValue(buf, args, params, excludedTableQualifiers, Case.result)
+		if err != nil {
+			return err
+		}
 	}
 	if len(f.cases) == 0 {
-		return fmt.Errorf("no predicate cases provided, stopping: %s", buf.String())
+		return fmt.Errorf("no predicate cases provided")
 	}
 	if f.fallback != nil {
 		buf.WriteString(" ELSE ")
-		_ = appendSQLValue(buf, args, params, excludedTableQualifiers, f.fallback)
+		err = appendSQLValue(buf, args, params, excludedTableQualifiers, f.fallback)
+		if err != nil {
+			return err
+		}
 	}
 	buf.WriteString(" END")
 	return nil
@@ -77,22 +89,36 @@ type SimpleCases struct {
 }
 
 func (f SimpleCases) GetAlias() string { return f.alias }
-func (f SimpleCases) GetName() string  { return "" }
+
+func (f SimpleCases) GetName() string { return "" }
+
 func (f SimpleCases) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
 	buf.WriteString("CASE ")
-	_ = appendSQLValue(buf, args, params, excludedTableQualifiers, f.expression)
+	err := appendSQLValue(buf, args, params, excludedTableQualifiers, f.expression)
+	if err != nil {
+		return err
+	}
 	for _, Case := range f.cases {
 		buf.WriteString(" WHEN ")
-		_ = appendSQLValue(buf, args, params, excludedTableQualifiers, Case.value)
+		err = appendSQLValue(buf, args, params, excludedTableQualifiers, Case.value)
+		if err != nil {
+			return err
+		}
 		buf.WriteString(" THEN ")
-		_ = appendSQLValue(buf, args, params, excludedTableQualifiers, Case.result)
+		err = appendSQLValue(buf, args, params, excludedTableQualifiers, Case.result)
+		if err != nil {
+			return err
+		}
 	}
 	if len(f.cases) == 0 {
-		return fmt.Errorf("no predicate cases provided, stopping: %s", buf.String())
+		return fmt.Errorf("no predicate cases provided")
 	}
 	if f.fallback != nil {
 		buf.WriteString(" ELSE ")
-		_ = appendSQLValue(buf, args, params, excludedTableQualifiers, f.fallback)
+		err = appendSQLValue(buf, args, params, excludedTableQualifiers, f.fallback)
+		if err != nil {
+			return err
+		}
 	}
 	buf.WriteString(" END")
 	return nil

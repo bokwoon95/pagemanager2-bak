@@ -9,12 +9,13 @@ import (
 
 func Test_Assignment(t *testing.T) {
 	assert := func(t *testing.T, a Assignment, wantQuery string, wantArgs []interface{}) {
-		Is := testutil.New(t)
+		is := testutil.New(t)
 		buf := &strings.Builder{}
 		var args []interface{}
-		_ = a.AppendSQLExclude("", buf, &args, make(map[string]int), nil)
-		Is.Equal(wantQuery, buf.String())
-		Is.Equal(wantArgs, args)
+		err := a.AppendSQLExclude("", buf, &args, make(map[string]int), nil)
+		is.NoErr(err)
+		is.Equal(wantQuery, buf.String())
+		is.Equal(wantArgs, args)
 	}
 
 	t.Run("field assign field", func(t *testing.T) {
@@ -35,12 +36,13 @@ func Test_Assignment(t *testing.T) {
 
 func Test_Assignments(t *testing.T) {
 	assert := func(t *testing.T, as Assignments, wantQuery string, wantArgs []interface{}) {
-		Is := testutil.New(t)
+		is := testutil.New(t)
 		buf := &strings.Builder{}
 		var args []interface{}
-		_ = as.AppendSQLExclude("", buf, &args, make(map[string]int), nil)
-		Is.Equal(wantQuery, buf.String())
-		Is.Equal(wantArgs, args)
+		err := as.AppendSQLExclude("", buf, &args, make(map[string]int), nil)
+		is.NoErr(err)
+		is.Equal(wantQuery, buf.String())
+		is.Equal(wantArgs, args)
 	}
 
 	t.Run("multiple assignments", func(t *testing.T) {

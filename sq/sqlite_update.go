@@ -20,6 +20,7 @@ type SQLiteUpdateQuery struct {
 }
 
 func (q SQLiteUpdateQuery) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+	var err error
 	var excludedTableQualifiers []string
 	if q.ColumnMapper != nil {
 		col := NewColumn(ColumnModeUpdate)
@@ -31,10 +32,12 @@ func (q SQLiteUpdateQuery) AppendSQL(dialect string, buf *strings.Builder, args 
 	}
 	// WITH
 	if len(q.CTEs) > 0 {
-		_ = q.CTEs.AppendCTEs(dialect, buf, args, params, q.FromTable, q.JoinTables)
+		err = q.CTEs.AppendCTEs(dialect, buf, args, params, q.FromTable, q.JoinTables)
+		if err != nil {
+			return err
+		}
 	}
 	// UPDATE
-	var err error
 	buf.WriteString("UPDATE ")
 	if q.UpdateTable == nil {
 		buf.WriteString("NULL")
@@ -56,7 +59,10 @@ func (q SQLiteUpdateQuery) AppendSQL(dialect string, buf *strings.Builder, args 
 	// SET
 	if len(q.Assignments) > 0 {
 		buf.WriteString(" SET ")
-		_ = q.Assignments.AppendSQLExclude(dialect, buf, args, nil, excludedTableQualifiers)
+		err = q.Assignments.AppendSQLExclude(dialect, buf, args, nil, excludedTableQualifiers)
+		if err != nil {
+			return err
+		}
 	}
 	// FROM
 	if q.FromTable != nil {
@@ -84,13 +90,19 @@ func (q SQLiteUpdateQuery) AppendSQL(dialect string, buf *strings.Builder, args 
 	// JOIN
 	if len(q.JoinTables) > 0 {
 		buf.WriteString(" ")
-		_ = q.JoinTables.AppendSQL(dialect, buf, args, nil)
+		err = q.JoinTables.AppendSQL(dialect, buf, args, nil)
+		if err != nil {
+			return err
+		}
 	}
 	// WHERE
 	if len(q.WherePredicate.Predicates) > 0 {
 		buf.WriteString(" WHERE ")
 		q.WherePredicate.Toplevel = true
-		_ = q.WherePredicate.AppendSQLExclude(dialect, buf, args, nil, nil)
+		err = q.WherePredicate.AppendSQLExclude(dialect, buf, args, nil, nil)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

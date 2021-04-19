@@ -15,16 +15,17 @@ func Test_BlobField(t *testing.T) {
 	}
 
 	assertField := func(t *testing.T, f BlobField, tt TT) {
-		Is := testutil.New(t)
+		is := testutil.New(t)
 		var _ Field = f
 		buf := &strings.Builder{}
 		var args []interface{}
-		_ = f.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
-		Is.Equal(tt.wantQuery, buf.String())
-		Is.Equal(f.alias, f.GetAlias())
-		Is.Equal(f.name, f.GetName())
+		err := f.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
+		is.NoErr(err)
+		is.Equal(tt.wantQuery, buf.String())
+		is.Equal(f.alias, f.GetAlias())
+		is.Equal(f.name, f.GetName())
 		if len(tt.excludedTableQualifiers) == 0 {
-			Is.Equal(f.String(), buf.String())
+			is.Equal(f.String(), buf.String())
 		}
 	}
 	t.Run("BlobField", func(t *testing.T) {
@@ -59,12 +60,13 @@ func Test_BlobField(t *testing.T) {
 	})
 
 	assertAssignment := func(t *testing.T, a Assignment, tt TT) {
-		Is := testutil.New(t)
+		is := testutil.New(t)
 		buf := &strings.Builder{}
 		var args []interface{}
-		_ = a.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
-		Is.Equal(tt.wantQuery, buf.String())
-		Is.Equal(tt.wantArgs, args)
+		err := a.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
+		is.NoErr(err)
+		is.Equal(tt.wantQuery, buf.String())
+		is.Equal(tt.wantArgs, args)
 	}
 	t.Run("SetBlob", func(t *testing.T) {
 		data := []byte{'a', 'b', 'c', 'd'}

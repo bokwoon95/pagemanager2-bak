@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/bokwoon95/erro"
@@ -80,7 +79,7 @@ func New() (*PageManager, error) {
 		tables.NEW_PAGES(ctx, ""),
 		tables.NEW_PAGEDATA(ctx, ""),
 		tables.NEW_USERS(ctx, ""),
-		tables.NEW_AUTHZ_GROUPS(ctx, ""),
+		tables.NEW_ROLES(ctx, ""),
 		tables.NEW_SESSIONS(ctx, ""),
 		tables.NEW_LOCALES(ctx, ""),
 	)
@@ -110,7 +109,7 @@ func New() (*PageManager, error) {
 }
 
 func (pm *PageManager) getKeys() (keys [][]byte, err error) {
-	if atomic.LoadInt32(&pm.privateBoxFlag) == 0 {
+	if !pm.boxesInitialized() {
 		return nil, erro.Wrap(fmt.Errorf("lacking superadmin password"))
 	}
 	ctx := context.Background()
@@ -128,13 +127,23 @@ func (pm *PageManager) getKeys() (keys [][]byte, err error) {
 	return keys, nil
 }
 
+type ctxKey string
+
+const (
+	ctxKeyUser ctxKey = "user"
+)
+
 func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/", next)
-	mux.HandleFunc("/pm-superadmin/login", pm.superadminLogin)
-	mux.HandleFunc("/pm-superadmin/", pm.superadminDashboard)
+	mux.HandleFunc(URLSuperadminLogin, pm.superadminLogin)
+	mux.HandleFunc(URLDashboard, pm.dashboard)
 	mux.HandleFunc("/pm-test-encrypt", pm.testEncrypt)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, err := pm.getSession(w, r)
+		if err == nil {
+			r = r.WithContext(context.WithValue(r.Context(), ctxKeyUser, user))
+		}
 		if strings.HasPrefix(r.URL.Path, "/pm-themes/") ||
 			strings.HasPrefix(r.URL.Path, "/pm-images/") ||
 			strings.HasPrefix(r.URL.Path, "/pm-plugins/pagemanager/") {
@@ -150,8 +159,11 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 				break
 			}
 			if superadminExists {
-				if !pm.hasSuperadminPassword() && *flagPass != "" {
-					_ = pm.setSuperadminPassword([]byte(*flagPass))
+				if !pm.boxesInitialized() && *flagPass != "" {
+					err = pm.initializeBoxes([]byte(*flagPass))
+					if err != nil {
+						log.Printf("Incorrect password passed to -pm-pass")
+					}
 				}
 				break
 			}
@@ -276,14 +288,15 @@ func executeTemplates(w http.ResponseWriter, data interface{}, fsys fs.FS, file 
 }
 
 func (pm *PageManager) testEncrypt(w http.ResponseWriter, r *http.Request) {
-	_, _, _, err := pm.getSession(w, r)
-	if err != nil {
-		fmt.Println("err:", err)
+	user := pm.getUser(w, r)
+	if user.Valid {
+		fmt.Printf("testEncrypt user: %+v\n", user)
 	}
 	const secret = "secret"
-	if atomic.LoadInt32(&pm.privateBoxFlag) == 0 {
-		_ = hyforms.SetCookieValue(w, "pagemanager.superadmin-login-redirect", r.URL.Path, nil)
-		http.Redirect(w, r, "/pm-superadmin/login", http.StatusMovedPermanently)
+	if !pm.boxesInitialized() {
+		_ = hyforms.SetCookieValue(w, cookieSuperadminLoginRedirect, r.URL.Path, nil)
+		noCache(w)
+		http.Redirect(w, r, URLSuperadminLogin, http.StatusMovedPermanently)
 		return
 	}
 	// privateBox

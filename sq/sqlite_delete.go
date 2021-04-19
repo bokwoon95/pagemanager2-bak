@@ -22,12 +22,15 @@ type SQLiteDeleteQuery struct {
 }
 
 func (q SQLiteDeleteQuery) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+	var err error
 	// WITH
 	if len(q.CTEs) > 0 {
-		_ = q.CTEs.AppendCTEs(dialect, buf, args, params, q.FromTable, nil)
+		err = q.CTEs.AppendCTEs(dialect, buf, args, params, q.FromTable, nil)
+		if err != nil {
+			return err
+		}
 	}
 	// DELETE FROM
-	var err error
 	buf.WriteString("DELETE FROM ")
 	if q.FromTable == nil {
 		buf.WriteString("NULL")
@@ -46,12 +49,18 @@ func (q SQLiteDeleteQuery) AppendSQL(dialect string, buf *strings.Builder, args 
 	if len(q.WherePredicate.Predicates) > 0 {
 		buf.WriteString(" WHERE ")
 		q.WherePredicate.Toplevel = true
-		_ = q.WherePredicate.AppendSQLExclude("", buf, args, nil, nil)
+		err = q.WherePredicate.AppendSQLExclude("", buf, args, nil, nil)
+		if err != nil {
+			return err
+		}
 	}
 	// ORDER BY
 	if len(q.OrderByFields) > 0 {
 		buf.WriteString(" ORDER BY ")
-		_ = q.OrderByFields.AppendSQLExclude("", buf, args, nil, nil)
+		err = q.OrderByFields.AppendSQLExclude("", buf, args, nil, nil)
+		if err != nil {
+			return err
+		}
 	}
 	// LIMIT
 	if q.LimitValid {

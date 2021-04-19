@@ -6,11 +6,15 @@ type RowValue []interface{}
 
 func (r RowValue) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
 	buf.WriteString("(")
+	var err error
 	for i, value := range r {
 		if i > 0 {
 			buf.WriteString(", ")
 		}
-		_ = appendSQLValue(buf, args, params, excludedTableQualifiers, value)
+		err = appendSQLValue(buf, args, params, excludedTableQualifiers, value)
+		if err != nil {
+			return err
+		}
 	}
 	buf.WriteString(")")
 	return nil
@@ -33,11 +37,15 @@ func (r RowValue) In(v interface{}) CustomPredicate {
 type RowValues []RowValue
 
 func (rs RowValues) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+	var err error
 	for i, rowvalue := range rs {
 		if i > 0 {
 			buf.WriteString(", ")
 		}
-		_ = rowvalue.AppendSQL(dialect, buf, args, params)
+		err = rowvalue.AppendSQL(dialect, buf, args, params)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

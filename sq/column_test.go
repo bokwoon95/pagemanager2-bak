@@ -83,7 +83,8 @@ func TestColumnUpdate(t *testing.T) {
 		a.TEAM_NAME.SetString("lorem ipsum"),
 		a.CREATED_AT.SetTime(now),
 	}.AppendSQLExclude("", buf1, &args1, make(map[string]int), nil)
-	_ = col.assignments.AppendSQLExclude("", buf2, &args2, make(map[string]int), nil)
+	err := col.assignments.AppendSQLExclude("", buf2, &args2, make(map[string]int), nil)
+	is.NoErr(err)
 	is.Equal(buf1.String(), buf2.String())
 	is.Equal(args1, args2)
 }

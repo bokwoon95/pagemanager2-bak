@@ -14,15 +14,24 @@ func Assign(LHS, RHS interface{}) Assignment {
 }
 
 func (a Assignment) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
-	_ = appendSQLValue(buf, args, params, excludedTableQualifiers, a.LHS)
+	err := appendSQLValue(buf, args, params, excludedTableQualifiers, a.LHS)
+	if err != nil {
+		return err
+	}
 	buf.WriteString(" = ")
 	switch a.RHS.(type) {
 	case Query:
 		buf.WriteString("(")
-		_ = appendSQLValue(buf, args, params, excludedTableQualifiers, a.RHS)
+		err = appendSQLValue(buf, args, params, excludedTableQualifiers, a.RHS)
+		if err != nil {
+			return err
+		}
 		buf.WriteString(")")
 	default:
-		_ = appendSQLValue(buf, args, params, excludedTableQualifiers, a.RHS)
+		err = appendSQLValue(buf, args, params, excludedTableQualifiers, a.RHS)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -30,11 +39,15 @@ func (a Assignment) AppendSQLExclude(dialect string, buf *strings.Builder, args 
 type Assignments []Assignment
 
 func (as Assignments) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
+	var err error
 	for i, a := range as {
 		if i > 0 {
 			buf.WriteString(", ")
 		}
-		_ = a.AppendSQLExclude(dialect, buf, args, params, excludedTableQualifiers)
+		err = a.AppendSQLExclude(dialect, buf, args, params, excludedTableQualifiers)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

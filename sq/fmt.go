@@ -15,11 +15,15 @@ import (
 
 func expandValues(buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string, format string, values []interface{}) error {
 	var value interface{}
+	var err error
 	for i := strings.Index(format, "?"); i >= 0 && len(values) > 0; i = strings.Index(format, "?") {
 		buf.WriteString(format[:i])
 		format = format[i+1:]
 		value, values = values[0], values[1:] // pop value from values
-		_ = appendSQLValue(buf, args, params, excludedTableQualifiers, value)
+		err = appendSQLValue(buf, args, params, excludedTableQualifiers, value)
+		if err != nil {
+			return err
+		}
 	}
 	buf.WriteString(format)
 	return nil
@@ -33,14 +37,12 @@ func appendSQLValue(buf *strings.Builder, args *[]interface{}, params map[string
 	case interface {
 		AppendSQLExclude(string, *strings.Builder, *[]interface{}, map[string]int, []string) error
 	}:
-		_ = v.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
-		return nil
+		return v.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
 	case interface {
 		AppendSQL(string, *strings.Builder, *[]interface{}, map[string]int) error
 	}:
 		// TODO: propogate this error (ugh this will pollute the entire system)
-		_ = v.AppendSQL("", buf, args, params)
-		return nil
+		return v.AppendSQL("", buf, args, params)
 	}
 	typ := reflect.TypeOf(value)
 	switch typ.Kind() {

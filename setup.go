@@ -265,7 +265,7 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 		return erro.Wrap(err)
 	}
 	// pm_users, pm_authz_groups
-	u, ag := tables.NEW_USERS(ctx, "u"), tables.NEW_AUTHZ_GROUPS(ctx, "ag")
+	u, ag := tables.NEW_USERS(ctx, "u"), tables.NEW_ROLES(ctx, "ag")
 	_, _, err = sq.Exec(db, sq.SQLite.DeleteFrom(u), sq.ErowsAffected)
 	if err != nil {
 		return erro.Wrap(err)
@@ -275,12 +275,12 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 		return erro.Wrap(err)
 	}
 	var users = []struct {
-		userid      int64
-		publicid    string
-		username    string
-		authzgroups []string
+		userid   int64
+		publicid string
+		username string
+		roles    []string
 	}{
-		{1, "", "", []string{"pm-pagemanager"}},
+		{1, "", "", []string{roleSuperadmin}},
 	}
 	_, _, err = sq.Exec(db, sq.SQLite.
 		InsertInto(u).
@@ -290,11 +290,11 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 				col.SetInt64(u.USER_ID, user.userid)
 				col.SetString(u.PUBLIC_USER_ID, user.publicid)
 				col.SetString(u.USERNAME, user.username)
-				b, err = json.Marshal(user.authzgroups)
+				b, err = json.Marshal(user.roles)
 				if err != nil {
 					return erro.Wrap(err)
 				}
-				col.Set(u.AUTHZ_GROUPS, string(b))
+				col.Set(u.ROLES, string(b))
 			}
 			return nil
 		}),
@@ -307,7 +307,7 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 		name string
 		data map[string]interface{}
 	}{
-		{"pm-pagemanager", map[string]interface{}{"pm-page-perms": PageCreate | PageRead | PageUpdate | PageDelete}},
+		{roleSuperadmin, map[string]interface{}{permissionPagePerms: PagePermsCreate | PagePermsRead | PagePermsUpdate | PagePermsDelete}},
 	}
 	_, _, err = sq.Exec(db, sq.SQLite.
 		InsertInto(ag).
@@ -319,7 +319,7 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 				if err != nil {
 					return erro.Wrap(err)
 				}
-				col.Set(ag.AUTHZ_DATA, string(b))
+				col.Set(ag.PERMISSIONS, string(b))
 			}
 			return nil
 		}),
@@ -373,11 +373,13 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 	return nil
 }
 
+type PagePerms int
+
 const (
-	PageCreate = 1 << iota
-	PageRead
-	PageUpdate
-	PageDelete
+	PagePermsCreate PagePerms = 0b1
+	PagePermsRead   PagePerms = 0b10
+	PagePermsUpdate PagePerms = 0b100
+	PagePermsDelete PagePerms = 0b1000
 )
 
 func getLocales(ctx context.Context, db sq.Queryer) (map[string]string, error) {
@@ -398,11 +400,11 @@ func getLocales(ctx context.Context, db sq.Queryer) (map[string]string, error) {
 	return locales, nil
 }
 
-func (pm *PageManager) hasSuperadminPassword() bool {
+func (pm *PageManager) boxesInitialized() bool {
 	return atomic.LoadInt32(&pm.privateBoxFlag) == 1
 }
 
-func (pm *PageManager) setSuperadminPassword(password []byte) error {
+func (pm *PageManager) initializeBoxes(password []byte) error {
 	ctx := context.Background()
 	var passwordHash []byte
 	var keyParams []byte

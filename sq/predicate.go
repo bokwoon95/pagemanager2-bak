@@ -74,6 +74,7 @@ func (p VariadicPredicate) AppendSQLExclude(dialect string, buf *strings.Builder
 	if p.Operator == "" {
 		p.Operator = PredicateAnd
 	}
+	var err error
 	switch len(p.Predicates) {
 	case 0:
 		return nil
@@ -89,12 +90,18 @@ func (p VariadicPredicate) AppendSQLExclude(dialect string, buf *strings.Builder
 				buf.WriteString("(")
 			}
 			v.Toplevel = true // if only one predicate and it is variadic, hoist it to the top level
-			_ = v.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
+			err = v.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
+			if err != nil {
+				return err
+			}
 			if !p.Toplevel {
 				buf.WriteString(")")
 			}
 		default:
-			_ = p.Predicates[0].AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
+			err = p.Predicates[0].AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
+			if err != nil {
+				return err
+			}
 		}
 	default:
 		if p.Negative {
@@ -112,7 +119,10 @@ func (p VariadicPredicate) AppendSQLExclude(dialect string, buf *strings.Builder
 			if predicate == nil {
 				buf.WriteString("NULL")
 			} else {
-				_ = predicate.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
+				err = predicate.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		if !p.Toplevel {

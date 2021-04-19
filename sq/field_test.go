@@ -73,12 +73,12 @@ func Test_field(t *testing.T) {
 	})
 
 	assertPredicate := func(t *testing.T, p Predicate, tt TT) {
-		Is := testutil.New(t)
+		is := testutil.New(t)
 		buf := &strings.Builder{}
 		var args []interface{}
 		p.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
-		Is.Equal(tt.wantQuery, buf.String())
-		Is.Equal(tt.wantArgs, args)
+		is.Equal(tt.wantQuery, buf.String())
+		is.Equal(tt.wantArgs, args)
 	}
 	t.Run("IS NULL", func(t *testing.T) {
 		u := NEW_USERS("u")
@@ -102,12 +102,12 @@ func Test_field(t *testing.T) {
 	})
 
 	assertAssignment := func(t *testing.T, a Assignment, tt TT) {
-		Is := testutil.New(t)
+		is := testutil.New(t)
 		buf := &strings.Builder{}
 		var args []interface{}
 		a.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
-		Is.Equal(tt.wantQuery, buf.String())
-		Is.Equal(tt.wantArgs, args)
+		is.Equal(tt.wantQuery, buf.String())
+		is.Equal(tt.wantArgs, args)
 	}
 	t.Run("Set", func(t *testing.T) {
 		u := NEW_USERS("")
@@ -129,17 +129,17 @@ func Test_CustomField(t *testing.T) {
 	}
 
 	assertField := func(t *testing.T, f CustomField, tt TT) {
-		Is := testutil.New(t)
+		is := testutil.New(t)
 		var _ Field = f
 		buf := &strings.Builder{}
 		var args []interface{}
 		f.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
-		Is.Equal(tt.wantQuery, buf.String())
-		Is.Equal(tt.wantArgs, args)
-		Is.Equal(f.alias, f.GetAlias())
-		Is.Equal(f.name, f.GetName())
+		is.Equal(tt.wantQuery, buf.String())
+		is.Equal(tt.wantArgs, args)
+		is.Equal(f.alias, f.GetAlias())
+		is.Equal(f.name, f.GetName())
 		if len(tt.excludedTableQualifiers) == 0 {
-			Is.Equal(f.String(), buf.String())
+			is.Equal(f.String(), buf.String())
 		}
 	}
 	t.Run("empty", func(t *testing.T) {
@@ -168,12 +168,12 @@ func Test_CustomField(t *testing.T) {
 	})
 
 	assertPredicate := func(t *testing.T, p Predicate, tt TT) {
-		Is := testutil.New(t)
+		is := testutil.New(t)
 		buf := &strings.Builder{}
 		var args []interface{}
 		p.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
-		Is.Equal(tt.wantQuery, buf.String())
-		Is.Equal(tt.wantArgs, args)
+		is.Equal(tt.wantQuery, buf.String())
+		is.Equal(tt.wantArgs, args)
 	}
 	t.Run("IS NULL", func(t *testing.T) {
 		tt := TT{wantQuery: "my_field IS NULL", excludedTableQualifiers: []string{"u"}}
@@ -250,12 +250,12 @@ func Test_Fields(t *testing.T) {
 	}
 
 	assertFields := func(t *testing.T, fs Fields, tt TT) {
-		Is := testutil.New(t)
+		is := testutil.New(t)
 		buf := &strings.Builder{}
 		var args []interface{}
 		fs.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
-		Is.Equal(tt.wantQuery, buf.String())
-		Is.Equal(tt.wantArgs, args)
+		is.Equal(tt.wantQuery, buf.String())
+		is.Equal(tt.wantArgs, args)
 	}
 	t.Run("empty", func(t *testing.T) {
 		tt := TT{wantQuery: "", wantArgs: nil}
@@ -268,12 +268,12 @@ func Test_Fields(t *testing.T) {
 	})
 
 	assertFieldsWithAlias := func(t *testing.T, fs Fields, tt TT) {
-		Is := testutil.New(t)
+		is := testutil.New(t)
 		buf := &strings.Builder{}
 		var args []interface{}
 		fs.AppendSQLExcludeWithAlias("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
-		Is.Equal(tt.wantQuery, buf.String())
-		Is.Equal(tt.wantArgs, args)
+		is.Equal(tt.wantQuery, buf.String())
+		is.Equal(tt.wantArgs, args)
 	}
 	t.Run("Fields with alias", func(t *testing.T) {
 		u := NEW_USERS("u")

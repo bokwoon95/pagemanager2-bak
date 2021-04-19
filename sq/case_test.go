@@ -15,14 +15,15 @@ func Test_PredicateCases(t *testing.T) {
 	}
 
 	assertField := func(t *testing.T, f PredicateCases, tt TT) {
-		Is := testutil.New(t)
+		is := testutil.New(t)
 		var _ Field = f
 		buf := &strings.Builder{}
 		var args []interface{}
-		_ = f.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
-		Is.Equal(tt.wantQuery, buf.String())
-		Is.Equal(f.alias, f.GetAlias())
-		Is.Equal("", f.GetName())
+		err := f.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
+		is.NoErr(err)
+		is.Equal(tt.wantQuery, buf.String())
+		is.Equal(f.alias, f.GetAlias())
+		is.Equal("", f.GetName())
 	}
 	t.Run("empty", func(t *testing.T) {
 		f := PredicateCases{}
@@ -63,14 +64,15 @@ func Test_SimpleCases(t *testing.T) {
 	}
 
 	assertField := func(t *testing.T, f SimpleCases, tt TT) {
-		Is := testutil.New(t)
+		is := testutil.New(t)
 		var _ Field = f
 		buf := &strings.Builder{}
 		var args []interface{}
-		_ = f.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
-		Is.Equal(tt.wantQuery, buf.String())
-		Is.Equal(f.alias, f.GetAlias())
-		Is.Equal("", f.GetName())
+		err := f.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
+		is.NoErr(err)
+		is.Equal(tt.wantQuery, buf.String())
+		is.Equal(f.alias, f.GetAlias())
+		is.Equal("", f.GetName())
 	}
 	t.Run("empty", func(t *testing.T) {
 		f := SimpleCases{}

@@ -126,8 +126,7 @@ func (f CustomField) AppendSQLExclude(dialect string, buf *strings.Builder, args
 		return nil
 	}
 	_ = expandValues(buf, args, params, excludedTableQualifiers, f.format, f.values)
-	_ = f.field.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
-	return nil
+	return f.field.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
 }
 
 func (f CustomField) String() string {
@@ -174,6 +173,7 @@ func (f FieldLiteral) GetName() string {
 type Fields []Field
 
 func (fs Fields) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
+	var err error
 	for i, field := range fs {
 		if i > 0 {
 			buf.WriteString(", ")
@@ -181,7 +181,10 @@ func (fs Fields) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]
 		if field == nil {
 			buf.WriteString("NULL")
 		} else {
-			_ = field.AppendSQLExclude(dialect, buf, args, params, excludedTableQualifiers)
+			err = field.AppendSQLExclude(dialect, buf, args, params, excludedTableQualifiers)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -189,6 +192,7 @@ func (fs Fields) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]
 
 func (fs Fields) AppendSQLExcludeWithAlias(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
 	var alias string
+	var err error
 	for i, f := range fs {
 		if i > 0 {
 			buf.WriteString(", ")
@@ -196,7 +200,10 @@ func (fs Fields) AppendSQLExcludeWithAlias(dialect string, buf *strings.Builder,
 		if f == nil {
 			buf.WriteString("NULL")
 		} else {
-			_ = f.AppendSQLExclude(dialect, buf, args, params, excludedTableQualifiers)
+			err = f.AppendSQLExclude(dialect, buf, args, params, excludedTableQualifiers)
+			if err != nil {
+				return err
+			}
 			if alias = f.GetAlias(); alias != "" {
 				buf.WriteString(" AS ")
 				buf.WriteString(alias)

@@ -135,8 +135,8 @@ type PM_USERS struct {
 	PUBLIC_USER_ID sq.StringField `sq:"type=TEXT misc=NOT_NULL,UNIQUE"`
 	USERNAME       sq.StringField
 	PASSWORD_HASH  sq.StringField
-	AUTHZ_DATA     sq.JSONField
-	AUTHZ_GROUPS   sq.JSONField
+	PERMISSIONS    sq.JSONField
+	ROLES          sq.JSONField
 	USER_DATA      sq.JSONField
 }
 
@@ -151,18 +151,18 @@ func NEW_USERS(ctx context.Context, alias string) PM_USERS {
 	return tbl
 }
 
-type PM_AUTHZ_GROUPS struct {
+type PM_ROLES struct {
 	sq.TableInfo
-	NAME       sq.StringField `sq:"type=TEXT misc=NOT_NULL,PRIMARY_KEY"`
-	AUTHZ_DATA sq.JSONField
+	NAME        sq.StringField `sq:"type=TEXT misc=NOT_NULL,PRIMARY_KEY"`
+	PERMISSIONS sq.JSONField
 }
 
-func NEW_AUTHZ_GROUPS(ctx context.Context, alias string) PM_AUTHZ_GROUPS {
-	tbl := PM_AUTHZ_GROUPS{TableInfo: sq.TableInfo{Alias: alias}}
+func NEW_ROLES(ctx context.Context, alias string) PM_ROLES {
+	tbl := PM_ROLES{TableInfo: sq.TableInfo{Alias: alias}}
 	if tenantID, ok := ctx.Value(TenantIDKey{}).(string); ok && tenantID != "" {
-		tbl.TableInfo.Name = "pm_" + tenantID + "_authz_groups"
+		tbl.TableInfo.Name = "pm_" + tenantID + "_roles"
 	} else {
-		tbl.TableInfo.Name = "pm_authz_groups"
+		tbl.TableInfo.Name = "pm_roles"
 	}
 	_ = sq.ReflectTable(&tbl)
 	return tbl
