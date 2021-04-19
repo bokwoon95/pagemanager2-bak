@@ -56,7 +56,9 @@ const (
 	URLLogin           = "/pm-login"
 	URLSuperadminLogin = "/pm-superadmin-login"
 	URLDashboard       = "/pm-dashboard"
-	URLEditRoute       = "/pm-edit-route" // ?route=/posts
+	URLEditPage        = "/pm-edit-page"   // GET,POST route=/url
+	URLCreatePage      = "/pm-create-page" // GET,POST route=/url
+	URLDeletePage      = "/pm-delete-page" // POST route=/url
 )
 
 const (

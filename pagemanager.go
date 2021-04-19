@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -324,19 +323,6 @@ func (pm *PageManager) executeTemplates(w http.ResponseWriter, data interface{},
 	}
 	buf.WriteTo(w)
 	return nil
-}
-
-func (pm *PageManager) executeTemplatesV2(w http.ResponseWriter, r *http.Request, data interface{}, fsys fs.FS, file string, files ...string) error {
-	r.ParseForm()
-	if len(r.Form[queryparamJSON]) > 0 {
-		b, err := json.Marshal(data)
-		if err != nil {
-			return erro.Wrap(err)
-		}
-		_, err = w.Write(b)
-		return err
-	}
-	return pm.executeTemplates(w, data, fsys, file, files...)
 }
 
 func (pm *PageManager) getRoute(ctx context.Context, path string) (route Route, localeCode string, err error) {
