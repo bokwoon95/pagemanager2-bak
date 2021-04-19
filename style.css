@@ -38,3 +38,7 @@
 .white-space-prewrap {
   white-space: pre-wrap;
 }
+
+.word-wrap {
+  word-break: break-all;
+}

@@ -47,6 +47,7 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 	var err error
 	switch r.Method {
 	case "GET":
+		noCache(w)
 		user := pm.getUser(w, r)
 		if user.HasRole(roleSuperadmin) {
 			http.Redirect(w, r, LocaleURL(r, URLDashboard), http.StatusMovedPermanently)
