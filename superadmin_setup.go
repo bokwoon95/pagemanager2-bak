@@ -17,6 +17,7 @@ import (
 )
 
 type superadminSetupData struct {
+	LoginCode       string
 	Password        string
 	ConfirmPassword string
 }
@@ -158,7 +159,7 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
-		http.Redirect(w, r, LocaleURL(r, URLSuperadminLogin), http.StatusMovedPermanently)
+		Redirect(w, r, URLSuperadminLogin)
 	default:
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 	}

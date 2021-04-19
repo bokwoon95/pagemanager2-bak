@@ -17,7 +17,9 @@ type User struct {
 	Valid        bool
 	UserID       int64
 	PublicUserID string
-	Username     string
+	LoginID      string
+	Email        string
+	Displayname  string
 	Roles        []string
 	Permissions  map[string]interface{}
 	UserData     map[string]interface{}
@@ -29,7 +31,7 @@ func (user *User) RowMapper(u tables.PM_USERS) func(*sq.Row) error {
 		user.Valid = userID.Valid
 		user.UserID = userID.Int64
 		user.PublicUserID = row.String(u.PUBLIC_USER_ID)
-		user.Username = row.String(u.USERNAME)
+		user.LoginID = row.String(u.LOGIN_ID)
 		rolesBytes := row.Bytes(u.ROLES)
 		permissionsBytes := row.Bytes(u.PERMISSIONS)
 		return row.Accumulate(func() error {

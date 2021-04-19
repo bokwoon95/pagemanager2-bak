@@ -1,0 +1,7 @@
+https://www.eff.org/dice
+> https://www.eff.org/files/2016/07/18/eff_large_wordlist.txt
+
+https://github.com/schollz/mnemonicode/blob/master/word_list.go
+
+http://www.webplaces.com/passwords/passphrase-word-lists.htm
+> http://www.webplaces.com/passwords/lists/Diceware-Improved-7776.txt

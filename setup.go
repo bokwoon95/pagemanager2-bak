@@ -289,7 +289,7 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 			for _, user := range users {
 				col.SetInt64(u.USER_ID, user.userid)
 				col.SetString(u.PUBLIC_USER_ID, user.publicid)
-				col.SetString(u.USERNAME, user.username)
+				col.SetString(u.LOGIN_ID, user.username)
 				b, err = json.Marshal(user.roles)
 				if err != nil {
 					return erro.Wrap(err)

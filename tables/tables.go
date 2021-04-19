@@ -133,8 +133,10 @@ type PM_USERS struct {
 	sq.TableInfo
 	USER_ID        sq.NumberField `sq:"type=INTEGER misc=PRIMARY_KEY"`
 	PUBLIC_USER_ID sq.StringField `sq:"type=TEXT misc=NOT_NULL,UNIQUE"`
-	USERNAME       sq.StringField
+	LOGIN_ID       sq.StringField
 	PASSWORD_HASH  sq.StringField
+	EMAIL          sq.StringField
+	DISPLAYNAME    sq.StringField
 	PERMISSIONS    sq.JSONField
 	ROLES          sq.JSONField
 	USER_DATA      sq.JSONField

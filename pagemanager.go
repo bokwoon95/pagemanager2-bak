@@ -131,6 +131,7 @@ func (pm *PageManager) getKeys() (keys [][]byte, err error) {
 func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/", next)
+	mux.HandleFunc(URLLogin, pm.login)
 	mux.HandleFunc(URLSuperadminLogin, pm.superadminLogin)
 	mux.HandleFunc(URLDashboard, pm.dashboard)
 	mux.HandleFunc("/pm-test-encrypt", pm.testEncrypt)
@@ -220,11 +221,14 @@ func (pm *PageManager) dataDBL() sq.DB {
 	return sq.NewDB(pm.dataDB, sq.DefaultLogger(), sq.Lcompact|sq.Lresults)
 }
 
-func noCache(w http.ResponseWriter) {
-	w.Header().Set("Cache-Control", "no-cache, private, max-age=0")
-	w.Header().Set("Expires", time.Unix(0, 0).Format(http.TimeFormat))
-	w.Header().Set("Pragma", "no-cache")
-	w.Header().Set("X-Accel-Expires", "0")
+func Redirect(w http.ResponseWriter, r *http.Request, url string) {
+	if r.Method == "GET" {
+		w.Header().Set("Cache-Control", "no-cache, private, max-age=0")
+		w.Header().Set("Expires", time.Unix(0, 0).Format(http.TimeFormat))
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("X-Accel-Expires", "0")
+	}
+	http.Redirect(w, r, LocaleURL(r, url), http.StatusMovedPermanently)
 }
 
 func (pm *PageManager) serveFile(w http.ResponseWriter, r *http.Request, name string) {
@@ -382,8 +386,7 @@ func (pm *PageManager) testEncrypt(w http.ResponseWriter, r *http.Request) {
 	const secret = "secret"
 	if !pm.boxesInitialized() {
 		_ = hyforms.SetCookieValue(w, cookieSuperadminLoginRedirect, r.URL.Path, nil)
-		noCache(w)
-		http.Redirect(w, r, LocaleURL(r, URLSuperadminLogin), http.StatusMovedPermanently)
+		Redirect(w, r, URLSuperadminLogin)
 		return
 	}
 	// privateBox

@@ -7,16 +7,18 @@ import (
 	"github.com/bokwoon95/erro"
 	"github.com/bokwoon95/pagemanager/hy"
 	"github.com/bokwoon95/pagemanager/hyforms"
-	"github.com/bokwoon95/pagemanager/sq"
 	"github.com/bokwoon95/pagemanager/tables"
 )
 
-type superadminLoginData struct {
-	LoginCode string
-	Password  string
+type loginData struct {
+	LoginID  string
+	Password string
 }
 
-func (d *superadminLoginData) LoginForm(form *hyforms.Form) {
+func (d *loginData) LoginForm(form *hyforms.Form) {
+	loginID := form.
+		Text("pm-login-id", d.LoginID).
+		Set("#pm-login-id.bg-near-white.pa2.w-100", hy.Attr{"required": hy.Enabled})
 	password := form.
 		Input("password", "pm-password", d.Password).
 		Set("#pm-password.bg-near-white.pa2.w-100", hy.Attr{"required": hy.Enabled})
@@ -28,7 +30,13 @@ func (d *superadminLoginData) LoginForm(form *hyforms.Form) {
 		}
 	}
 	form.Append("div.mt3.mb1", nil,
-		hy.H("label.pointer", hy.Attr{"for": password.ID()}, hy.Txt("Superadmin Password:")))
+		hy.H("label.pointer", hy.Attr{"for": loginID.ID()}, hy.Txt("Email or Username:")))
+	form.Append("div", nil, loginID)
+	if hyforms.ErrMsgsMatch(loginID.ErrMsgs(), hyforms.RequiredErrMsg) {
+		form.Append("div.f7.red", nil, hy.Txt(hyforms.RequiredErrMsg))
+	}
+	form.Append("div.mt3.mb1", nil,
+		hy.H("label.pointer", hy.Attr{"for": password.ID()}, hy.Txt("Password:")))
 	form.Append("div", nil, password)
 	if hyforms.ErrMsgsMatch(password.ErrMsgs(), hyforms.RequiredErrMsg) {
 		form.Append("div.f7.red", nil, hy.Txt(hyforms.RequiredErrMsg))
@@ -36,18 +44,18 @@ func (d *superadminLoginData) LoginForm(form *hyforms.Form) {
 	form.Append("div.mt3", nil, hy.H("button.pointer.pa2", hy.Attr{"type": "submit"}, hy.Txt("Log In")))
 
 	form.Unmarshal(func() {
+		d.LoginID = loginID.Validate(hyforms.Required).Value()
 		d.Password = password.Validate(hyforms.Required).Value()
 	})
 }
 
-func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
+func (pm *PageManager) login(w http.ResponseWriter, r *http.Request) {
 	type templateData struct {
-		Title    string
-		Header   template.HTML
-		Form     template.HTML
-		HasUsers bool
+		Title  string
+		Header template.HTML
+		Form   template.HTML
 	}
-	data := &superadminLoginData{}
+	data := &loginData{}
 	var err error
 	switch r.Method {
 	case "GET":
@@ -65,9 +73,7 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
-		USERS := tables.NEW_USERS(r.Context(), "u")
-		tdata.HasUsers, _ = sq.Exists(pm.dataDB, sq.SQLite.From(USERS).Where(USERS.USER_ID.NeInt(1)))
-		err = pm.executeTemplates(w, tdata, pagemanagerFS, "superadmin_login.html")
+		err = pm.executeTemplates(w, tdata, pagemanagerFS, "login.html")
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
@@ -78,6 +84,12 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
 			return
 		}
+		var passwordHash []byte
+		USERS := tables.NEW_USERS(r.Context(), "u")
+		rowCount, err := sq.Fetch(pm.superadminDB, sq.SQLite.
+			From(USERS).
+			Where(USERS.LOGIN_ID.Eq(data.LoginID)).
+		)
 		err = pm.initializeBoxes([]byte(data.Password))
 		if err != nil {
 			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, err.Error())

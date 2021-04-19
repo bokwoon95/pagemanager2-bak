@@ -24,11 +24,11 @@ func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 	var err error
 	switch r.Method {
 	case "GET":
-		noCache(w)
 		user := pm.getUser(w, r)
 		switch {
 		case !user.Valid:
 			_ = hyforms.SetCookieValue(w, cookieSuperadminLoginRedirect, r.URL.Path, nil)
+			Redirect(w, r, URLSuperadminLogin)
 			pm.Unauthorized(w, r)
 			return
 		case !user.HasPagePerms(PagePermsRead):
