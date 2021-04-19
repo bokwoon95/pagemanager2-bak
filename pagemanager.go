@@ -143,7 +143,7 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 		}
 		route, localeCode, err := pm.getRoute(r.Context(), r.URL.Path)
 		if err != nil {
-			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
 		r2 := &http.Request{} // r2 is like r, but with the localeCode stripped from the URL and injected into the request context
@@ -267,7 +267,7 @@ func (pm *PageManager) serveFile(w http.ResponseWriter, r *http.Request, name st
 		if errors.Is(err, os.ErrNotExist) {
 			http.NotFound(w, r)
 		} else {
-			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			pm.InternalServerError(w, r, erro.Wrap(err))
 		}
 		return
 	}
@@ -278,7 +278,7 @@ func (pm *PageManager) serveFile(w http.ResponseWriter, r *http.Request, name st
 	defer f.Close()
 	info, err := f.Stat()
 	if err != nil {
-		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+		pm.InternalServerError(w, r, erro.Wrap(err))
 		return
 	}
 	if info.IsDir() {
@@ -389,50 +389,50 @@ func (pm *PageManager) testEncrypt(w http.ResponseWriter, r *http.Request) {
 	// privateBox
 	b, err := pm.privateBox.Base64Encrypt([]byte(secret))
 	if err != nil {
-		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+		pm.InternalServerError(w, r, erro.Wrap(err))
 		return
 	}
 	io.WriteString(w, "privateBox encrypted: "+string(b)+"\n")
 	b, err = pm.privateBox.Base64Decrypt(b)
 	if err != nil {
-		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+		pm.InternalServerError(w, r, erro.Wrap(err))
 		return
 	}
 	io.WriteString(w, "privateBox decrypted: "+string(b)+"\n")
 	b, err = pm.privateBox.Base64Hash([]byte(secret))
 	if err != nil {
-		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+		pm.InternalServerError(w, r, erro.Wrap(err))
 		return
 	}
 	io.WriteString(w, "privateBox hashedmsg: "+string(b)+"\n")
 	b, err = pm.privateBox.Base64VerifyHash(b)
 	if err != nil {
-		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+		pm.InternalServerError(w, r, erro.Wrap(err))
 		return
 	}
 	io.WriteString(w, "privateBox msg: "+string(b)+"\n")
 	// publicBox
 	b, err = pm.publicBox.Base64Encrypt([]byte(secret))
 	if err != nil {
-		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+		pm.InternalServerError(w, r, erro.Wrap(err))
 		return
 	}
 	io.WriteString(w, "publicBox encrypted: "+string(b)+"\n")
 	b, err = pm.publicBox.Base64Decrypt(b)
 	if err != nil {
-		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+		pm.InternalServerError(w, r, erro.Wrap(err))
 		return
 	}
 	io.WriteString(w, "publicBox decrypted: "+string(b)+"\n")
 	b, err = pm.publicBox.Base64Hash([]byte(secret))
 	if err != nil {
-		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+		pm.InternalServerError(w, r, erro.Wrap(err))
 		return
 	}
 	io.WriteString(w, "publicBox hashedmsg: "+string(b)+"\n")
 	b, err = pm.publicBox.Base64VerifyHash(b)
 	if err != nil {
-		http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+		pm.InternalServerError(w, r, erro.Wrap(err))
 		return
 	}
 	io.WriteString(w, "publicBox msg: "+string(b)+"\n")

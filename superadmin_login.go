@@ -1,12 +1,12 @@
 package pagemanager
 
 import (
+	"html/template"
 	"net/http"
 
 	"github.com/bokwoon95/erro"
 	"github.com/bokwoon95/pagemanager/hy"
 	"github.com/bokwoon95/pagemanager/hyforms"
-	"github.com/bokwoon95/pagemanager/templates"
 )
 
 type superadminLoginData struct {
@@ -38,8 +38,13 @@ func (d *superadminLoginData) LoginForm(form *hyforms.Form) {
 }
 
 func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
-	var err error
+	type templateData struct {
+		Title  string
+		Header template.HTML
+		Form   template.HTML
+	}
 	data := &superadminLoginData{}
+	var err error
 	switch r.Method {
 	case "GET":
 		user := pm.getUser(w, r)
@@ -47,18 +52,18 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, LocaleURL(r, URLDashboard), http.StatusMovedPermanently)
 			return
 		}
-		templateData := templates.CenterForm{
+		tdata := templateData{
 			Title:  "PageManager Login",
 			Header: "PageManager Login",
 		}
-		templateData.Form, err = hyforms.MarshalForm(nil, w, r, data.LoginForm)
+		tdata.Form, err = hyforms.MarshalForm(nil, w, r, data.LoginForm)
 		if err != nil {
-			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
-		err = pm.executeTemplates(w, templateData, pagemanagerFS, "templates/center-form.html")
+		err = pm.executeTemplates(w, tdata, pagemanagerFS, "superadmin_login.html")
 		if err != nil {
-			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
 	case "POST":
@@ -75,7 +80,7 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 		}
 		err = pm.newSession(w, 1, nil)
 		if err != nil {
-			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
 		var redirectURL string

@@ -2,6 +2,7 @@ package pagemanager
 
 import (
 	"crypto/rand"
+	"html/template"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -13,7 +14,6 @@ import (
 	"github.com/bokwoon95/pagemanager/keyderiv"
 	"github.com/bokwoon95/pagemanager/sq"
 	"github.com/bokwoon95/pagemanager/tables"
-	"github.com/bokwoon95/pagemanager/templates"
 )
 
 type superadminSetupData struct {
@@ -65,24 +65,29 @@ func (d *superadminSetupData) setupForm(form *hyforms.Form) {
 }
 
 func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
+	type templateData struct {
+		Title  string
+		Header template.HTML
+		Form   template.HTML
+	}
+	data := &superadminSetupData{}
 	const setupForm = "setupForm"
 	var err error
-	data := &superadminSetupData{}
 	switch r.Method {
 	case "GET":
-		templateData := templates.CenterForm{
+		tdata := templateData{
 			Title:  "PageManager Setup",
 			Header: "PageManager Setup",
 		}
 		_ = hyforms.GetCookieValue(w, r, setupForm, data)
-		templateData.Form, err = hyforms.MarshalForm(nil, w, r, data.setupForm)
+		tdata.Form, err = hyforms.MarshalForm(nil, w, r, data.setupForm)
 		if err != nil {
-			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
-		err = pm.executeTemplates(w, templateData, pagemanagerFS, "templates/center-form.html")
+		err = pm.executeTemplates(w, tdata, pagemanagerFS, "superadmin_setup.html")
 		if err != nil {
-			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
 	case "POST":
@@ -94,18 +99,18 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 		}
 		passwordHash, err := keyderiv.GenerateFromPassword([]byte(data.Password))
 		if err != nil {
-			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
 		params, err := keyderiv.NewParams()
 		if err != nil {
-			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
 		key := params.DeriveKey([]byte(data.Password))
 		pm.privateBox, err = encrypthash.NewStaticKey(key)
 		if err != nil {
-			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
 		atomic.StoreInt32(&pm.privateBoxFlag, 1)
@@ -120,24 +125,24 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 			}), 0,
 		)
 		if err != nil {
-			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
 		key = make([]byte, 32)
 		_, err = rand.Read(key)
 		if err != nil {
-			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
 		keyCiphertext, err := pm.privateBox.Base64Encrypt(key)
 		if err != nil {
-			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
 		KEYS := tables.NEW_KEYS(r.Context(), "")
 		_, _, err = sq.Exec(pm.superadminDB, sq.SQLite.DeleteFrom(KEYS), 0)
 		if err != nil {
-			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
 		_, _, err = sq.Exec(pm.superadminDB, sq.SQLite.
@@ -150,7 +155,7 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 			}), 0,
 		)
 		if err != nil {
-			http.Error(w, erro.Wrap(err).Error(), http.StatusInternalServerError)
+			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
 		http.Redirect(w, r, LocaleURL(r, URLSuperadminLogin), http.StatusMovedPermanently)

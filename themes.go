@@ -221,12 +221,12 @@ func (pm *PageManager) serveTemplate(w http.ResponseWriter, r *http.Request, rou
 		filename = strings.TrimPrefix(filename, "/")
 		b, err := fs.ReadFile(datafolderFS, filename)
 		if err != nil {
-			http.Error(w, erro.Sdump(err), http.StatusInternalServerError)
+			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
 		_, err = t.New(filename).Parse(string(b))
 		if err != nil {
-			http.Error(w, erro.Sdump(err), http.StatusInternalServerError)
+			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
 	}
@@ -253,7 +253,7 @@ func (pm *PageManager) serveTemplate(w http.ResponseWriter, r *http.Request, rou
 	}
 	err := t.Execute(w, data)
 	if err != nil {
-		http.Error(w, erro.Sdump(err), http.StatusInternalServerError)
+		pm.InternalServerError(w, r, erro.Wrap(err))
 		return
 	}
 	return

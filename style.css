@@ -34,3 +34,7 @@
   color: white;
   align-items: center;
 }
+
+.white-space-prewrap {
+  white-space: pre-wrap;
+}

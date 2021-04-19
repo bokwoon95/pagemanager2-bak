@@ -26,10 +26,13 @@ func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		noCache(w)
 		user := pm.getUser(w, r)
-		if !user.HasPagePerms(PagePermsRead) {
-			// TODO: redirect to 401/403 instead
+		switch {
+		case !user.Valid:
 			_ = hyforms.SetCookieValue(w, cookieSuperadminLoginRedirect, r.URL.Path, nil)
-			http.Redirect(w, r, LocaleURL(r, URLSuperadminLogin), http.StatusMovedPermanently)
+			pm.Unauthorized(w, r)
+			return
+		case !user.HasPagePerms(PagePermsRead):
+			pm.Forbidden(w, r)
 			return
 		}
 		data := dashboardData{}
