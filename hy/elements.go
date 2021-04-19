@@ -130,6 +130,14 @@ func (l Elements) AppendHTML(buf *strings.Builder) error {
 	return nil
 }
 
+func (l *Elements) Append(selector string, attributes map[string]string, children ...Element) {
+	*l = append(*l, H(selector, attributes, children...))
+}
+
+func (l *Elements) AppendElements(children ...Element) {
+	*l = append(*l, children...)
+}
+
 type JSONElement struct {
 	attrs Attributes
 	value interface{}

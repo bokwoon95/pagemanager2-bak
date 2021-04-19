@@ -5,14 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/pm-plugins/pagemanager/tachyons.css">
   <link rel="stylesheet" href="/pm-plugins/pagemanager/style.css">
-  <title>Superadmin Dashboard</title>
+  <title>{{ .Title }}</title>
 </head>
 <body class="bg-light-gray sans-serif">
   <nav id="pm-superadmin-navbar">
     <div class="mh2">PageManager</div>
   </nav>
   <div class="pa4">
-    This is the superadmin dashboard
+    <h1 class="f-subheadline">{{ .Header }}</h1>
+    {{ .ErrMsg }}
   </div>
 </body>
 </html>

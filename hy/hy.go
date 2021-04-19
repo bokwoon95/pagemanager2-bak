@@ -80,6 +80,8 @@ var defaultSanitizer = func() Sanitizer {
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attributes
 	p.AllowElements("script")
 	p.AllowAttrs("async", "crossorigin", "defer", "integrity", "nomodule", "nonce", "referrerpolicy", "src", "type").OnElements("script")
+	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/pre#attributes
+	p.AllowElements("pre")
 
 	p.AllowElements("svg")
 
