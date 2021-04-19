@@ -9,7 +9,7 @@ import (
 
 func Test_Box(t *testing.T) {
 	is := testutil.New(t)
-	box, err := New([]byte("abcdefg"), nil)
+	box, err := NewStaticKey([]byte("abcdefg"))
 	is.NoErr(err)
 
 	t.Run("encryption", func(t *testing.T) {
@@ -17,11 +17,11 @@ func Test_Box(t *testing.T) {
 		plaintext := []byte("lorem ipsum dolor sit amet")
 		ciphertext, err := box.Base64Encrypt(plaintext)
 		is.NoErr(err)
-		fmt.Println(ciphertext)
+		fmt.Println(string(ciphertext))
 		got, err := box.Base64Decrypt(ciphertext)
 		is.NoErr(err)
 		is.Equal(plaintext, got)
-		_, err = box.Base64Decrypt(ciphertext + "tampered")
+		_, err = box.Base64Decrypt(append(ciphertext, "tampered"...))
 		is.True(err != nil)
 	})
 
@@ -30,11 +30,11 @@ func Test_Box(t *testing.T) {
 		msg := []byte("lorem ipsum dolor sit amet")
 		hashedmsg, err := box.Base64Hash(msg)
 		is.NoErr(err)
-		fmt.Println(hashedmsg)
+		fmt.Println(string(hashedmsg))
 		got, err := box.Base64VerifyHash(hashedmsg)
 		is.NoErr(err)
 		is.Equal(msg, got)
-		_, err = box.Base64VerifyHash(hashedmsg + "tampered")
+		_, err = box.Base64VerifyHash(append(hashedmsg, "tampered"...))
 		is.True(err != nil)
 	})
 }

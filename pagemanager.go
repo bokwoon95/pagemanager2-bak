@@ -16,9 +16,11 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/bokwoon95/erro"
 	"github.com/bokwoon95/pagemanager/encrypthash"
+	"github.com/bokwoon95/pagemanager/hyforms"
 	"github.com/bokwoon95/pagemanager/sq"
 	"github.com/bokwoon95/pagemanager/tables"
 	_ "github.com/mattn/go-sqlite3"
@@ -164,6 +166,17 @@ func (pm *PageManager) superadminDBL() sq.DB {
 	return sq.NewDB(pm.superadminDB, sq.DefaultLogger(), sq.Lcompact)
 }
 
+func (pm *PageManager) dataDBL() sq.DB {
+	return sq.NewDB(pm.dataDB, sq.DefaultLogger(), sq.Lcompact|sq.Lresults)
+}
+
+func noCache(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-cache, private, max-age=0")
+	w.Header().Set("Expires", time.Unix(0, 0).Format(http.TimeFormat))
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("X-Accel-Expires", "0")
+}
+
 func (pm *PageManager) serveFile(w http.ResponseWriter, r *http.Request, name string) {
 	var f fs.File
 	var err error
@@ -263,9 +276,14 @@ func executeTemplates(w http.ResponseWriter, data interface{}, fsys fs.FS, file 
 }
 
 func (pm *PageManager) testEncrypt(w http.ResponseWriter, r *http.Request) {
+	_, _, _, err := pm.getSession(w, r)
+	if err != nil {
+		fmt.Println("err:", err)
+	}
 	const secret = "secret"
 	if atomic.LoadInt32(&pm.privateBoxFlag) == 0 {
-		io.WriteString(w, "not yet loaded")
+		_ = hyforms.SetCookieValue(w, "pagemanager.superadmin-login-redirect", r.URL.Path, nil)
+		http.Redirect(w, r, "/pm-superadmin/login", http.StatusMovedPermanently)
 		return
 	}
 	// privateBox

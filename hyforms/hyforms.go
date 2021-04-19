@@ -136,6 +136,7 @@ func SetCookieValue(w http.ResponseWriter, cookieName string, value interface{},
 	if cookieTemplate != nil {
 		*cookie = *cookieTemplate
 	}
+	cookie.Path = "/"
 	cookie.Name = cookieName
 	cookie.Value = string(b64HashedValue)
 	http.SetCookie(w, cookie)
@@ -143,7 +144,7 @@ func SetCookieValue(w http.ResponseWriter, cookieName string, value interface{},
 }
 
 func GetCookieValue(w http.ResponseWriter, r *http.Request, cookieName string, dest interface{}) error {
-	defer http.SetCookie(w, &http.Cookie{Name: cookieName, MaxAge: -1, Expires: time.Now().Add(-1 * time.Hour)})
+	defer http.SetCookie(w, &http.Cookie{Path: "/", Name: cookieName, MaxAge: -1, Expires: time.Now().Add(-1 * time.Hour)})
 	c, err := r.Cookie(cookieName)
 	if err != nil && !errors.Is(err, http.ErrNoCookie) {
 		return err

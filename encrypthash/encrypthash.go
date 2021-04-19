@@ -146,6 +146,40 @@ func (box Box) Hash(msg []byte) (hash []byte, err error) {
 	return sum, nil
 }
 
+func (box Box) HashAll(msg []byte) (hashes [][]byte, err error) {
+	var keys [][]byte
+	if box.getKeys != nil {
+		keys, err = box.getKeys()
+		if err != nil {
+			return nil, err
+		}
+		if len(keys) == 0 {
+			return nil, ErrNoKey
+		}
+	} else {
+		if len(box.key) == 0 {
+			return nil, ErrNoKey
+		}
+		keys = [][]byte{box.key}
+	}
+	for _, key := range keys {
+		if box.processKey != nil {
+			key, err = box.processKey(key)
+			if err != nil {
+				return hashes, err
+			}
+		}
+		hashedKey := blake2b.Sum512([]byte(key))
+		hashedKeyLower := hashedKey[32:]
+		h, _ := blake2b.New512(hashedKeyLower)
+		h.Reset()
+		h.Write([]byte(msg))
+		hash := h.Sum(nil)
+		hashes = append(hashes, hash)
+	}
+	return hashes, nil
+}
+
 func (box Box) VerifyHash(msg []byte, hash []byte) error {
 	var err error
 	var keys [][]byte
@@ -167,7 +201,7 @@ func (box Box) VerifyHash(msg []byte, hash []byte) error {
 		if box.processKey != nil {
 			key, err = box.processKey(key)
 			if err != nil {
-				return ErrNoKey
+				return err
 			}
 		}
 		hashedKey := blake2b.Sum512([]byte(key))
@@ -214,7 +248,7 @@ func (box Box) Base64Hash(msg []byte) (b64HashedMsg []byte, err error) {
 	b64Hash := make([]byte, base64.RawURLEncoding.EncodedLen(len(hash)))
 	base64.RawURLEncoding.Encode(b64Hash, hash)
 	b64HashedMsg = append(b64HashedMsg, b64Msg...)
-	b64HashedMsg = append(b64HashedMsg, '.')
+	b64HashedMsg = append(b64HashedMsg, '~')
 	b64HashedMsg = append(b64HashedMsg, b64Hash...)
 	return b64HashedMsg, nil
 }
@@ -222,7 +256,7 @@ func (box Box) Base64Hash(msg []byte) (b64HashedMsg []byte, err error) {
 func (box Box) Base64VerifyHash(b64HashedMsg []byte) (msg []byte, err error) {
 	dotIndex := -1
 	for i, c := range b64HashedMsg {
-		if c == '.' {
+		if c == '~' {
 			dotIndex = i
 			break
 		}

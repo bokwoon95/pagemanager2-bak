@@ -144,7 +144,10 @@ func fetchContext(ctx context.Context, db Queryer, q Query, rowmapper func(*Row)
 		bufpool.Put(tmpbuf)
 		argspool.Put(tmpargs)
 	}()
-	_ = q.AppendSQL("", buf, &stats.Args, make(map[string]int))
+	err = q.AppendSQL("", buf, &stats.Args, make(map[string]int))
+	if err != nil {
+		return 0, err
+	}
 	stats.Query = buf.String()
 	if stats.Dialect == "postgres" {
 		stats.Query = QuestionToDollarPlaceholders(stats.Query)
@@ -272,7 +275,10 @@ func execContext(ctx context.Context, db Queryer, q Query, execFlag ExecFlag, sk
 		buf.Reset()
 		bufpool.Put(buf)
 	}()
-	_ = q.AppendSQL("", buf, &stats.Args, make(map[string]int))
+	err = q.AppendSQL("", buf, &stats.Args, make(map[string]int))
+	if err != nil {
+		return 0, 0, err
+	}
 	stats.Query = buf.String()
 	if stats.Dialect == "postgres" {
 		stats.Query = QuestionToDollarPlaceholders(stats.Query)

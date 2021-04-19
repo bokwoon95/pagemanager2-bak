@@ -1,6 +1,9 @@
 package sq
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type PredicateCase struct {
 	condition Predicate
@@ -22,6 +25,9 @@ func (f PredicateCases) AppendSQLExclude(dialect string, buf *strings.Builder, a
 		_ = appendSQLValue(buf, args, params, excludedTableQualifiers, Case.condition)
 		buf.WriteString(" THEN ")
 		_ = appendSQLValue(buf, args, params, excludedTableQualifiers, Case.result)
+	}
+	if len(f.cases) == 0 {
+		return fmt.Errorf("no predicate cases provided, stopping: %s", buf.String())
 	}
 	if f.fallback != nil {
 		buf.WriteString(" ELSE ")
@@ -80,6 +86,9 @@ func (f SimpleCases) AppendSQLExclude(dialect string, buf *strings.Builder, args
 		_ = appendSQLValue(buf, args, params, excludedTableQualifiers, Case.value)
 		buf.WriteString(" THEN ")
 		_ = appendSQLValue(buf, args, params, excludedTableQualifiers, Case.result)
+	}
+	if len(f.cases) == 0 {
+		return fmt.Errorf("no predicate cases provided, stopping: %s", buf.String())
 	}
 	if f.fallback != nil {
 		buf.WriteString(" ELSE ")
