@@ -85,6 +85,9 @@ var defaultSanitizer = func() Sanitizer {
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/a#attributes
 	p.AllowElements("a")
 	p.AllowAttrs("href", "hreflang", "ping", "rel", "target", "type").OnElements("a")
+	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/fieldset#attributes
+	p.AllowElements("fieldset", "legend")
+	p.AllowAttrs("disabled", "form", "name").OnElements("fieldset")
 
 	p.AllowElements("svg")
 

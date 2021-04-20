@@ -15,8 +15,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/bokwoon95/erro"
 	"github.com/bokwoon95/pagemanager/encrypthash"
+	"github.com/bokwoon95/pagemanager/erro"
 	"github.com/bokwoon95/pagemanager/keyderiv"
 	"github.com/bokwoon95/pagemanager/sq"
 	"github.com/bokwoon95/pagemanager/tables"
@@ -40,6 +40,7 @@ func init() {
 	if pagemanagerFS == nil {
 		pagemanagerFS = os.DirFS(filepath.Dir(currentFile))
 	}
+	erro.ProjectDir = filepath.Dir(currentFile)
 }
 
 func LocateDataFolder() (string, error) {
@@ -411,7 +412,7 @@ func (pm *PageManager) initializeBoxes(password []byte) error {
 	SUPERADMIN := tables.NEW_SUPERADMIN(ctx, "")
 	rowCount, err := sq.Fetch(pm.superadminDB, sq.SQLite.
 		From(SUPERADMIN).
-		Where(SUPERADMIN.ID.EqInt(1)),
+		Where(SUPERADMIN.ORDER_NUM.EqInt(1)),
 		func(row *sq.Row) error {
 			passwordHash = row.Bytes(SUPERADMIN.PASSWORD_HASH)
 			keyParams = row.Bytes(SUPERADMIN.KEY_PARAMS)

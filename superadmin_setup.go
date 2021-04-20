@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bokwoon95/erro"
 	"github.com/bokwoon95/pagemanager/encrypthash"
+	"github.com/bokwoon95/pagemanager/erro"
 	"github.com/bokwoon95/pagemanager/hy"
 	"github.com/bokwoon95/pagemanager/hyforms"
 	"github.com/bokwoon95/pagemanager/keyderiv"
@@ -24,12 +24,9 @@ type superadminSetupData struct {
 
 func (d *superadminSetupData) setupForm(form *hyforms.Form) {
 	const passwordNotMatch = "passwords do not match"
-	loginCode := form. // no! it is not an input. instead it is a fixed piece of text that changes every refresh
+	logincode := form.
 		Text("pm-login-code", d.LoginCode).
-		Set("#pm-password.bg-near-white.pa2.w-100", hy.Attr{
-			"required": hy.Enabled,
-			"title":    "Login Code",
-		})
+		Set("#pm-password.bg-near-white.pa2.w-100", hy.Attr{"title": "Login Code"})
 	password := form.
 		Input("password", "pm-password", d.Password).
 		Set("#pm-password.bg-near-white.pa2.w-100", hy.Attr{
@@ -43,11 +40,25 @@ func (d *superadminSetupData) setupForm(form *hyforms.Form) {
 			"title":    "Confirm Superadmin Password",
 		})
 
-	form.Set(".bg-white.center-form", hy.Attr{"method": "POST"})
-	form.Append("div.f4", nil,
-		hy.Txt("No Superadmin detected."))
-	form.Append("div.f6", nil,
-		hy.Txt("To make changes to your website, you need to create a Superadmin account."))
+	form.Set(".bg-white.setup-form", hy.Attr{"method": "POST"})
+	form.AppendElements(hy.Elements{
+		hy.H("div.f4", nil, hy.Txt("No Superadmin detected.")),
+		hy.H("div.f6", nil, hy.Txt("To make changes to your website, you need to create a Superadmin account.")),
+	})
+	form.AppendElements(hy.Elements{
+		hy.H("div.mt4.i", nil, hy.Txt("Login Code")),
+		hy.H("hr.mv1", nil),
+		hy.H("div.f6", nil, hy.Txt("If you are deploying PageManager on the internet, it is recommended that you use one of the suggested login codes. Otherwise if you are only using PageManager offline, you can leave the login code blank.")),
+	})
+	form.Append("div.mt3.mb1", nil,
+		hy.H("label.pointer", hy.Attr{"for": logincode.ID()}, hy.Txt("Superadmin Login Code: (optional)")))
+	form.Append("div", nil, logincode)
+	form.Append("div", nil, hy.Txt("Suggestion: apple demure ace"))
+
+	form.AppendElements(hy.Elements{
+		hy.H("div.mt4.i", nil, hy.Txt("Password")),
+		hy.H("hr.mv1", nil),
+	})
 	form.Append("div.mt3.mb1", nil,
 		hy.H("label.pointer", hy.Attr{"for": password.ID()}, hy.Txt("Superadmin Password:")))
 	form.Append("div", nil, password)
@@ -63,7 +74,7 @@ func (d *superadminSetupData) setupForm(form *hyforms.Form) {
 	form.Append("div.mt3", nil, hy.H("button.pointer.pa2", hy.Attr{"type": "submit"}, hy.Txt("Create Superadmin")))
 
 	form.Unmarshal(func() {
-		d.LoginCode = loginCode.Validate(hyforms.Required).Value()
+		d.LoginCode = logincode.Validate().Value()
 		d.Password = password.Validate(hyforms.Required).Value()
 		d.ConfirmPassword = confirmPassword.Value()
 		if d.ConfirmPassword != d.Password {
@@ -126,7 +137,7 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 		_, _, err = sq.Exec(pm.superadminDB, sq.SQLite.
 			InsertInto(SUPERADMIN).
 			Valuesx(func(col *sq.Column) error {
-				col.SetInt(SUPERADMIN.ID, 1)
+				col.SetInt(SUPERADMIN.ORDER_NUM, 1)
 				col.SetString(SUPERADMIN.PASSWORD_HASH, string(passwordHash))
 				col.SetString(SUPERADMIN.KEY_PARAMS, params.String())
 				return nil
@@ -156,7 +167,7 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 		_, _, err = sq.Exec(pm.superadminDB, sq.SQLite.
 			InsertInto(KEYS).
 			Valuesx(func(col *sq.Column) error {
-				col.SetInt(KEYS.ID, 1)
+				col.SetInt(KEYS.ORDER_NUM, 1)
 				col.SetString(KEYS.KEY_CIPHERTEXT, string(keyCiphertext))
 				col.SetTime(KEYS.CREATED_AT, time.Now())
 				return nil

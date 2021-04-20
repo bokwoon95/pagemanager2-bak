@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bokwoon95/erro"
+	"github.com/bokwoon95/pagemanager/erro"
 	"github.com/bokwoon95/pagemanager/testutil"
 )
 

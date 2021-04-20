@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/bokwoon95/erro"
+	"github.com/bokwoon95/pagemanager/erro"
 	"github.com/dop251/goja"
 )
 

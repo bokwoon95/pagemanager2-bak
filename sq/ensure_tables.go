@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/bokwoon95/erro"
+	"github.com/bokwoon95/pagemanager/erro"
 )
 
 func EnsureTables(db Queryer, dialect string, tables ...Table) error {

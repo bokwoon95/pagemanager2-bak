@@ -4,7 +4,7 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/bokwoon95/erro"
+	"github.com/bokwoon95/pagemanager/erro"
 	"github.com/bokwoon95/pagemanager/hy"
 	"github.com/bokwoon95/pagemanager/hyforms"
 	"github.com/bokwoon95/pagemanager/keyderiv"

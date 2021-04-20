@@ -18,8 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bokwoon95/erro"
 	"github.com/bokwoon95/pagemanager/encrypthash"
+	"github.com/bokwoon95/pagemanager/erro"
 	"github.com/bokwoon95/pagemanager/hyforms"
 	"github.com/bokwoon95/pagemanager/sq"
 	"github.com/bokwoon95/pagemanager/tables"
@@ -115,7 +115,7 @@ func (pm *PageManager) getKeys() (keys [][]byte, err error) {
 	}
 	ctx := context.Background()
 	KEYS := tables.NEW_KEYS(ctx, "")
-	_, err = sq.Fetch(pm.superadminDB, sq.SQLite.From(KEYS).OrderBy(KEYS.ID), func(row *sq.Row) error {
+	_, err = sq.Fetch(pm.superadminDB, sq.SQLite.From(KEYS).OrderBy(KEYS.ORDER_NUM), func(row *sq.Row) error {
 		key := row.Bytes(KEYS.KEY_CIPHERTEXT)
 		return row.Accumulate(func() error {
 			keys = append(keys, key)

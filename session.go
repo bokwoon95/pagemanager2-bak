@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bokwoon95/erro"
+	"github.com/bokwoon95/pagemanager/erro"
 	"github.com/bokwoon95/pagemanager/sq"
 	"github.com/bokwoon95/pagemanager/tables"
 )

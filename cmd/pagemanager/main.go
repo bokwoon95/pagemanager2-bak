@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/bokwoon95/erro"
+	"github.com/bokwoon95/pagemanager/erro"
 	"github.com/bokwoon95/pagemanager"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
