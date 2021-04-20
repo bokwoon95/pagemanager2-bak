@@ -321,9 +321,70 @@ func (i *SelectInput) AppendHTML(buf *strings.Builder) error {
 	return nil
 }
 
+func (i *SelectInput) ID() string { return i.attrs.ID }
+
+func (i *SelectInput) Name() string { return i.name }
+
+func (i *SelectInput) Value() string {
+	if i.form.mode != FormModeUnmarshal {
+		return ""
+	}
+	return i.form.request.FormValue(i.name)
+}
+
 func (i *SelectInput) Values() []string {
 	if i.form.mode != FormModeUnmarshal {
 		return nil
 	}
 	return i.form.request.Form[i.name]
+}
+
+type TextareaInput struct {
+	form         *Form
+	attrs        hy.Attributes
+	name         string
+	defaultValue string
+}
+
+func (f *Form) Textarea(name string, defaultValue string) *TextareaInput {
+	f.registerName(name, 1)
+	return &TextareaInput{form: f, name: name, defaultValue: defaultValue}
+}
+
+func (i *TextareaInput) Set(selector string, attributes map[string]string) *TextareaInput {
+	i.attrs = hy.ParseAttributes(selector, attributes)
+	return i
+}
+
+func (i *TextareaInput) AppendHTML(buf *strings.Builder) error {
+	if i.attrs.Dict == nil {
+		i.attrs.Dict = make(map[string]string)
+	}
+	i.attrs.Tag = "textarea"
+	i.attrs.Dict["name"] = i.name
+	err := hy.AppendHTML(buf, i.attrs, []hy.Element{hy.Txt(i.defaultValue)})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (i *TextareaInput) ID() string { return i.attrs.ID }
+
+func (i *TextareaInput) Name() string { return i.name }
+
+func (i *TextareaInput) DefaultValue() string { return i.defaultValue }
+
+func (i *TextareaInput) Value() string {
+	if i.form.mode != FormModeUnmarshal {
+		return ""
+	}
+	if len(i.form.request.Form[i.name]) == 0 {
+		return ""
+	}
+	return i.form.request.Form[i.name][0]
+}
+
+func (i *TextareaInput) ErrMsgs() []string {
+	return i.form.inputErrMsgs[i.name]
 }

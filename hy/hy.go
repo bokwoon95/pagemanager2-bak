@@ -88,6 +88,12 @@ var defaultSanitizer = func() Sanitizer {
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/fieldset#attributes
 	p.AllowElements("fieldset", "legend")
 	p.AllowAttrs("disabled", "form", "name").OnElements("fieldset")
+	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/textarea#attributes
+	p.AllowElements("textarea")
+	p.AllowAttrs(
+		"autocomplete", "autofocus", "cols", "disabled", "form", "maxlength", "name",
+		"placeholder", "readonly", "required", "rows", "spellcheck", "wrap",
+	).OnElements("textarea")
 
 	p.AllowElements("svg")
 
