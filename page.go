@@ -14,15 +14,16 @@ import (
 )
 
 type Page struct {
-	Valid       bool
-	URL         string
-	PageType    string
-	Disabled    bool
-	RedirectURL string
-	HandlerURL  string
-	Content     string
-	ThemePath   string
-	Template    string
+	Valid        bool
+	URL          string
+	PageType     string
+	Disabled     bool
+	RedirectURL  string
+	PluginName   string
+	HandlerName  string
+	Content      string
+	ThemePath    string
+	TemplateName string
 }
 
 func (page *Page) RowMapper(p tables.PM_PAGES) func(*sq.Row) error {
@@ -33,10 +34,11 @@ func (page *Page) RowMapper(p tables.PM_PAGES) func(*sq.Row) error {
 		page.PageType = row.String(p.PAGE_TYPE)
 		page.Disabled = row.Bool(p.DISABLED)
 		page.RedirectURL = row.String(p.REDIRECT_URL)
-		page.HandlerURL = row.String(p.HANDLER_URL)
+		page.PluginName = row.String(p.PLUGIN_NAME)
+		page.HandlerName = row.String(p.HANDLER_NAME)
 		page.Content = row.String(p.CONTENT)
 		page.ThemePath = row.String(p.THEME_PATH)
-		page.Template = row.String(p.TEMPLATE)
+		page.TemplateName = row.String(p.TEMPLATE_NAME)
 		return nil
 	}
 }

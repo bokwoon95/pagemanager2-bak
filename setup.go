@@ -198,22 +198,6 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 	if err != nil {
 		return erro.Wrap(err)
 	}
-	// pm_pages.handler_url
-	_, _, err = sq.Exec(db, sq.SQLite.
-		InsertInto(p).
-		Valuesx(func(col *sq.Column) error {
-			col.SetString(p.PAGE_TYPE, PageTypePlugin)
-			col.SetString(p.URL, `/goodbye`)
-			col.SetString(p.HANDLER_URL, `/`)
-			return nil
-		}).
-		OnConflict(p.URL).
-		DoUpdateSet(sq.SetExcluded(p.HANDLER_URL)),
-		sq.ErowsAffected,
-	)
-	if err != nil {
-		return erro.Wrap(err)
-	}
 	// pm_pages.theme_path, pm_pages.template
 	var templates = []struct {
 		url, theme_path, template string
@@ -227,12 +211,12 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 				col.SetString(p.PAGE_TYPE, PageTypeTemplate)
 				col.SetString(p.URL, t.url)
 				col.SetString(p.THEME_PATH, t.theme_path)
-				col.SetString(p.TEMPLATE, t.template)
+				col.SetString(p.TEMPLATE_NAME, t.template)
 			}
 			return nil
 		}).
 		OnConflict(p.URL).
-		DoUpdateSet(sq.SetExcluded(p.THEME_PATH), sq.SetExcluded(p.TEMPLATE)),
+		DoUpdateSet(sq.SetExcluded(p.THEME_PATH), sq.SetExcluded(p.TEMPLATE_NAME)),
 		sq.ErowsAffected,
 	)
 	if err != nil {

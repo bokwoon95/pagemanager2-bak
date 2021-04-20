@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
 type HTMLElement struct {
@@ -48,7 +50,7 @@ func (el *HTMLElement) AppendElements(elements ...Element) *HTMLElement {
 }
 
 type textValue struct {
-	v interface{}
+	values []interface{}
 }
 
 // adapted from database/sql:asString, text/template:printableValue,printValue
@@ -109,12 +111,24 @@ func Stringify(v interface{}) string {
 }
 
 func (txt textValue) AppendHTML(buf *strings.Builder) error {
-	buf.WriteString(Stringify(txt.v))
+	for _, value := range txt.values {
+		if s, ok := value.(string); ok {
+			if s == "" {
+				continue
+			}
+			buf.WriteString(s)
+			if r, _ := utf8.DecodeLastRuneInString(s); !unicode.IsSpace(r) {
+				buf.WriteByte(' ')
+			}
+			continue
+		}
+		buf.WriteString(Stringify(value))
+	}
 	return nil
 }
 
-func Txt(v interface{}) Element {
-	return textValue{v: v}
+func Txt(a ...interface{}) Element {
+	return textValue{values: a}
 }
 
 type Elements []Element

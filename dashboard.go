@@ -79,7 +79,7 @@ func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 			case PageTypePlugin:
 				div.Append("div", nil,
 					hy.Txt("HandlerURL: "),
-					hy.Txt(page.HandlerURL),
+					hy.Txt(page.HandlerName),
 					hy.H("div", nil, hy.H("a", hy.Attr{"href": URLEditPage + "?url=" + page.URL}, hy.Txt("edit"))),
 				)
 			case PageTypeContent:
@@ -92,7 +92,7 @@ func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 					hy.Txt("ThemePath: "),
 					hy.Txt(page.ThemePath),
 					hy.Txt(", Template: "),
-					hy.Txt(page.Template),
+					hy.Txt(page.TemplateName),
 					hy.H("div", nil, hy.H("a", hy.Attr{"href": URLEditPage + "?url=" + page.URL}, hy.Txt("edit"))),
 				)
 			default:

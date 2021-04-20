@@ -190,21 +190,21 @@ func (t *theme) Unmarshal(data interface{}) {
 	}
 }
 
-func (pm *PageManager) serveTemplate(w http.ResponseWriter, r *http.Request, page Page) {
+func (pm *PageManager) serveTemplate(w http.ResponseWriter, r *http.Request, themePath, templateName string) {
 	pm.themesMutex.RLock()
-	theme, ok := pm.themes[page.ThemePath]
+	theme, ok := pm.themes[themePath]
 	pm.themesMutex.RUnlock()
 	if !ok {
-		http.Error(w, erro.Sdump(fmt.Errorf("No such theme called %s", page.ThemePath)), http.StatusInternalServerError)
+		http.Error(w, erro.Sdump(fmt.Errorf("No such theme %s", themePath)), http.StatusInternalServerError)
 		return
 	}
 	if theme.err != nil {
 		http.Error(w, erro.Sdump(theme.err), http.StatusInternalServerError)
 		return
 	}
-	themeTemplate, ok := theme.themeTemplates[page.Template]
+	themeTemplate, ok := theme.themeTemplates[templateName]
 	if !ok {
-		http.Error(w, erro.Sdump(fmt.Errorf("No such template called %s for theme %s", page.Template, page.ThemePath)), http.StatusInternalServerError)
+		http.Error(w, erro.Sdump(fmt.Errorf("No such template called %s for theme %s", templateName, themePath)), http.StatusInternalServerError)
 		return
 	}
 	if len(themeTemplate.HTML) == 0 {
@@ -233,16 +233,16 @@ func (pm *PageManager) serveTemplate(w http.ResponseWriter, r *http.Request, pag
 	t = t.Lookup(strings.TrimPrefix(themeTemplate.HTML[0], "/"))
 	data := Data{
 		Page: PageData{
-			Ctx:       r.Context(),
-			URL:       page.URL,
-			DataID:    page.URL,
-			cssAssets: themeTemplate.CSS,
-			jsAssets:  themeTemplate.JS,
-			csp:       themeTemplate.ContentSecurityPolicy,
+			Ctx:        r.Context(),
+			URL:        r.URL.Path,
+			DataID:     r.URL.Path,
+			LocaleCode: LocaleCode(r),
+			cssAssets:  themeTemplate.CSS,
+			jsAssets:   themeTemplate.JS,
+			csp:        themeTemplate.ContentSecurityPolicy,
 		},
 		TemplateVariables: themeTemplate.TemplateVariables,
 	}
-	data.Page.LocaleCode, _ = r.Context().Value(ctxKeyLocaleCode).(string)
 	switch r.FormValue(queryparamEditMode) {
 	case EditModeBasic:
 		data.Page.EditMode = EditModeBasic

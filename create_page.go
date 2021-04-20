@@ -7,9 +7,12 @@ import (
 	"github.com/bokwoon95/pagemanager/erro"
 	"github.com/bokwoon95/pagemanager/hy"
 	"github.com/bokwoon95/pagemanager/hyforms"
+	"github.com/bokwoon95/pagemanager/sq"
+	"github.com/bokwoon95/pagemanager/tables"
 )
 
 type createPageData struct {
+	urlExists bool
 	Page
 }
 
@@ -17,57 +20,66 @@ func (data *createPageData) Form(form *hyforms.Form) {
 	url := form.Text("url", data.URL)
 	pageType := form.Select("page-type", hyforms.Options{
 		{Value: "", Display: "--- Select a Page Type ---", Selected: data.PageType == ""},
-		{Value: PageTypeTemplate, Display: "Template", Selected: data.PageType == PageTypeTemplate},
+		{Value: PageTypeTemplate, Display: "Theme Template", Selected: data.PageType == PageTypeTemplate},
+		{Value: PageTypePlugin, Display: "Plugin Handler", Selected: data.PageType == PageTypePlugin},
 		{Value: PageTypeContent, Display: "Content", Selected: data.PageType == PageTypeContent},
-		{Value: PageTypePlugin, Display: "Plugin", Selected: data.PageType == PageTypePlugin},
 		{Value: PageTypeRedirect, Display: "Redirect", Selected: data.PageType == PageTypeRedirect},
 		{Value: PageTypeDisabled, Display: "Disabled", Selected: data.PageType == PageTypeDisabled},
 	})
-	disabled := form.Checkbox("disabled", "", data.Disabled).Set(".pointer.dib", nil)
-	redirectURL := form.Text("redirect-url", data.RedirectURL)
-	// TODO: change the shitty handler URL
+	themePath := form.Text("theme-path", data.ThemePath)
+	templateName := form.Text("template-name", data.TemplateName)
+	pluginName := form.Text("plugin-name", data.PluginName)
+	handlerName := form.Text("handler-name", data.HandlerName)
 	content := form.Textarea("content", data.Content)
-	theme := form.Text("theme", data.ThemePath)
-	template := form.Text("template", data.Template)
+	redirectURL := form.Text("redirect-url", data.RedirectURL)
+	disabled := form.Checkbox("disabled", "", data.Disabled).Set(".pointer.dib", nil)
 
 	form.Set("", hy.Attr{"method": "POST"})
 	form.AppendElements(
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": url.ID()}, hy.Txt("URL: "))),
 		hy.H("div", nil, url),
 	)
+	if data.urlExists {
+		form.Append("div.f6.red", nil, hy.Txt("error: url", data.URL, "already exists"))
+	}
 	form.AppendElements(
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": pageType.ID()}, hy.Txt("Page Type: "))),
 		hy.H("div", nil, pageType),
 	)
 	form.AppendElements(
-		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": disabled.ID()}, hy.Txt("Disabled: "), disabled)),
+		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": themePath.ID()}, hy.Txt("Theme Path: "))),
+		hy.H("div", nil, themePath),
+		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": templateName.ID()}, hy.Txt("Template Name: "))),
+		hy.H("div", nil, templateName),
 	)
 	form.AppendElements(
-		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": redirectURL.ID()}, hy.Txt("Redirect URL: "))),
-		hy.H("div", nil, redirectURL),
+		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": pluginName.ID()}, hy.Txt("Plugin Name: "))),
+		hy.H("div", nil, pluginName),
+		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": handlerName.ID()}, hy.Txt("Handler Name: "))),
+		hy.H("div", nil, handlerName),
 	)
 	form.AppendElements(
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": content.ID()}, hy.Txt("Content: "))),
 		hy.H("div", nil, content),
 	)
 	form.AppendElements(
-		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": theme.ID()}, hy.Txt("Theme: "))),
-		hy.H("div", nil, theme),
+		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": redirectURL.ID()}, hy.Txt("Redirect URL: "))),
+		hy.H("div", nil, redirectURL),
 	)
 	form.AppendElements(
-		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": template.ID()}, hy.Txt("Template: "))),
-		hy.H("div", nil, template),
+		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": disabled.ID()}, hy.Txt("Disabled: "), disabled)),
 	)
 
 	form.Unmarshal(func() {
 		data.URL = url.Value()
 		data.PageType = pageType.Value()
-		data.Disabled = disabled.Checked()
-		data.RedirectURL = redirectURL.Value()
-		// TODO: Plugin
+		data.ThemePath = themePath.Value()
+		data.TemplateName = templateName.Value()
+		data.PluginName = pluginName.Value()
+		data.HandlerName = handlerName.Value()
 		data.Content = content.Value()
-		data.ThemePath = theme.Value()
-		data.Template = template.Value()
+		data.RedirectURL = redirectURL.Value()
+		data.Disabled = disabled.Checked()
 	})
 }
 
@@ -92,6 +104,10 @@ func (pm *PageManager) createPage(w http.ResponseWriter, r *http.Request) {
 		}
 		data.URL = r.FormValue("url")
 		tdata := templateData{}
+		if data.URL != "" {
+			PAGES := tables.NEW_PAGES(r.Context(), "p")
+			data.urlExists, _ = sq.Exists(pm.dataDB, sq.SQLite.From(PAGES).Where(PAGES.URL.EqString(data.URL)))
+		}
 		tdata.Form, err = hyforms.MarshalForm(nil, w, r, data.Form)
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))

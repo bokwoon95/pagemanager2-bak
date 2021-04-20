@@ -43,6 +43,7 @@ type PageManager struct {
 	innerMACKey         []byte // key-stretched from user's low-entropy password
 	localesMutex        *sync.RWMutex
 	locales             map[string]string
+	plugins             map[string]map[string]http.Handler
 }
 
 func New() (*PageManager, error) {
@@ -188,14 +189,22 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 			Redirect(w, r, page.RedirectURL)
 			return
 		case PageTypePlugin:
-			r2.URL.Path = page.HandlerURL
-			mux.ServeHTTP(w, r2)
+			if page.PluginName == "" || page.HandlerName == "" {
+				pm.InternalServerError(w, r, erro.Wrap(fmt.Errorf("empty PluginName or HandlerName")))
+				return
+			}
+			handler := pm.plugins[page.PluginName][page.HandlerName]
+			if handler == nil {
+				pm.InternalServerError(w, r, erro.Wrap(fmt.Errorf("handler not found for %s %s", page.PluginName, page.HandlerName)))
+				return
+			}
+			handler.ServeHTTP(w, r2)
 			return
 		case PageTypeContent:
 			io.WriteString(w, page.Content)
 			return
 		case PageTypeTemplate:
-			pm.serveTemplate(w, r2, page)
+			pm.serveTemplate(w, r2, page.ThemePath, page.TemplateName)
 			return
 		}
 		mux.ServeHTTP(w, r2)
@@ -215,6 +224,11 @@ func LocaleURL(r *http.Request, url string) string {
 		return path
 	}
 	return "/" + localeCode + path
+}
+
+func LocaleCode(r *http.Request) string {
+	localeCode, _ := r.Context().Value(ctxKeyLocaleCode).(string)
+	return localeCode
 }
 
 func (pm *PageManager) superadminDBL() sq.DB {

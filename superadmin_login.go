@@ -58,7 +58,7 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		user := pm.getUser(w, r)
-		if user.HasRole(roleSuperadmin) {
+		if user.Valid && user.HasRole(roleSuperadmin) {
 			Redirect(w, r, URLDashboard)
 			return
 		}

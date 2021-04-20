@@ -58,9 +58,9 @@ const (
 )
 
 const (
-	PageTypeDisabled = "disabled"
-	PageTypeRedirect = "redirect"
-	PageTypePlugin   = "plugin"
-	PageTypeContent  = "content"
 	PageTypeTemplate = "template"
+	PageTypeContent  = "content"
+	PageTypePlugin   = "plugin"
+	PageTypeRedirect = "redirect"
+	PageTypeDisabled = "disabled"
 )

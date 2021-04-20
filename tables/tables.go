@@ -41,19 +41,18 @@ type PM_PAGES struct {
 	sq.TableInfo
 	URL       sq.StringField `sq:"type=TEXT misc=NOT_NULL,PRIMARY_KEY"`
 	PAGE_TYPE sq.StringField
-	// 404 Not Found
-	DISABLED sq.BooleanField
-	// 301 Moved Permanently
-	REDIRECT_URL sq.StringField
+	// templates
+	THEME_PATH    sq.StringField
+	TEMPLATE_NAME sq.StringField
 	// plugins
-	PLUGIN       sq.StringField
+	PLUGIN_NAME  sq.StringField
 	HANDLER_NAME sq.StringField
-	HANDLER_URL  sq.StringField
 	// content body
 	CONTENT sq.StringField
-	// templates
-	THEME_PATH sq.StringField
-	TEMPLATE   sq.StringField
+	// 301 Moved Permanently
+	REDIRECT_URL sq.StringField
+	// 404 Not Found
+	DISABLED sq.BooleanField
 }
 
 func NEW_PAGES(ctx context.Context, alias string) PM_PAGES {
