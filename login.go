@@ -83,7 +83,7 @@ func (pm *PageManager) login(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		errMsgs, ok := hyforms.UnmarshalForm(w, r, data.LoginForm)
 		if !ok {
-			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
+			hyforms.Redirect(w, r, LocaleURL(r, r.URL.Path), errMsgs)
 			return
 		}
 		var userID int64
@@ -100,18 +100,18 @@ func (pm *PageManager) login(w http.ResponseWriter, r *http.Request) {
 		)
 		if err != nil {
 			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, err.Error())
-			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
+			hyforms.Redirect(w, r, LocaleURL(r, r.URL.Path), errMsgs)
 			return
 		}
 		if rowCount == 0 {
 			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, "The login ID or password is incorrect")
-			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
+			hyforms.Redirect(w, r, LocaleURL(r, r.URL.Path), errMsgs)
 			return
 		}
 		err = keyderiv.CompareHashAndPassword(passwordHash, []byte(data.Password))
 		if err != nil {
 			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, "The login ID or password is incorrect")
-			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
+			hyforms.Redirect(w, r, LocaleURL(r, r.URL.Path), errMsgs)
 			return
 		}
 		err = pm.newSession(w, userID, nil)
@@ -120,12 +120,32 @@ func (pm *PageManager) login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var redirectURL string
-		_ = hyforms.GetCookieValue(w, r, cookieSuperadminLoginRedirect, &redirectURL)
+		_ = hyforms.GetCookieValue(w, r, cookieLoginRedirect, &redirectURL)
 		if redirectURL != "" {
 			Redirect(w, r, redirectURL)
 			return
 		}
 		Redirect(w, r, URLDashboard)
+	default:
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+	}
+}
+
+func (pm *PageManager) logout(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "POST":
+		err := pm.deleteSession(w, r)
+		if err != nil {
+			pm.InternalServerError(w, r, erro.Wrap(err))
+			return
+		}
+		var redirectURL string
+		_ = hyforms.GetCookieValue(w, r, cookieLogoutRedirect, &redirectURL)
+		if redirectURL != "" {
+			Redirect(w, r, redirectURL)
+			return
+		}
+		Redirect(w, r, "/")
 	default:
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 	}

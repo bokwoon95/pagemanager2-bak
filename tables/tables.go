@@ -11,18 +11,14 @@ type TenantIDKey struct{}
 type PM_SUPERADMIN struct {
 	sq.TableInfo
 	ORDER_NUM     sq.NumberField `sq:"type=INTEGER misc=PRIMARY_KEY"`
-	LOGIN_CODE    sq.StringField
+	LOGIN_ID      sq.StringField
 	PASSWORD_HASH sq.StringField
 	KEY_PARAMS    sq.StringField
 }
 
-func NEW_SUPERADMIN(ctx context.Context, alias string) PM_SUPERADMIN {
+func NEW_SUPERADMIN(alias string) PM_SUPERADMIN {
 	tbl := PM_SUPERADMIN{TableInfo: sq.TableInfo{Alias: alias}}
-	if tenantID, ok := ctx.Value(TenantIDKey{}).(string); ok && tenantID != "" {
-		tbl.TableInfo.Name = "pm_" + tenantID + "_superadmin"
-	} else {
-		tbl.TableInfo.Name = "pm_superadmin"
-	}
+	tbl.TableInfo.Name = "pm_superadmin"
 	_ = sq.ReflectTable(&tbl)
 	return tbl
 }
@@ -34,49 +30,9 @@ type PM_KEYS struct {
 	CREATED_AT     sq.TimeField
 }
 
-func NEW_KEYS(ctx context.Context, alias string) PM_KEYS {
+func NEW_KEYS(alias string) PM_KEYS {
 	tbl := PM_KEYS{TableInfo: sq.TableInfo{Alias: alias}}
-	if tenantID, ok := ctx.Value(TenantIDKey{}).(string); ok && tenantID != "" {
-		tbl.TableInfo.Name = "pm_" + tenantID + "_keys"
-	} else {
-		tbl.TableInfo.Name = "pm_keys"
-	}
-	_ = sq.ReflectTable(&tbl)
-	return tbl
-}
-
-type PM_ENCRYPTION_KEYS struct {
-	sq.TableInfo
-	ID             sq.NumberField `sq:"type=INTEGER misc=NOT_NULL,UNIQUE"`
-	KEY_CIPHERTEXT sq.StringField
-	CREATED_AT     sq.TimeField
-}
-
-func NEW_ENCRYPTION_KEYS(ctx context.Context, alias string) PM_ENCRYPTION_KEYS {
-	tbl := PM_ENCRYPTION_KEYS{TableInfo: sq.TableInfo{Alias: alias}}
-	if tenantID, ok := ctx.Value(TenantIDKey{}).(string); ok && tenantID != "" {
-		tbl.TableInfo.Name = "pm_" + tenantID + "_encryption_keys"
-	} else {
-		tbl.TableInfo.Name = "pm_encryption_keys"
-	}
-	_ = sq.ReflectTable(&tbl)
-	return tbl
-}
-
-type PM_MAC_KEYS struct {
-	sq.TableInfo
-	ID             sq.NumberField `sq:"type=INTEGER misc=NOT_NULL,UNIQUE"`
-	KEY_CIPHERTEXT sq.StringField
-	CREATED_AT     sq.TimeField
-}
-
-func NEW_MAC_KEYS(ctx context.Context, alias string) PM_MAC_KEYS {
-	tbl := PM_MAC_KEYS{TableInfo: sq.TableInfo{Alias: alias}}
-	if tenantID, ok := ctx.Value(TenantIDKey{}).(string); ok && tenantID != "" {
-		tbl.TableInfo.Name = "pm_" + tenantID + "_mac_keys"
-	} else {
-		tbl.TableInfo.Name = "pm_mac_keys"
-	}
+	tbl.TableInfo.Name = "pm_keys"
 	_ = sq.ReflectTable(&tbl)
 	return tbl
 }

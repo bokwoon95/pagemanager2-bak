@@ -27,9 +27,8 @@ func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 		user := pm.getUser(w, r)
 		switch {
 		case !user.Valid:
-			_ = hyforms.SetCookieValue(w, cookieSuperadminLoginRedirect, r.URL.Path, nil)
-			Redirect(w, r, URLSuperadminLogin)
-			pm.Unauthorized(w, r)
+			_ = hyforms.SetCookieValue(w, cookieLoginRedirect, LocaleURL(r, r.URL.Path), nil)
+			pm.RedirectToLogin(w, r)
 			return
 		case !user.HasPagePerms(PagePermsRead):
 			pm.Forbidden(w, r)
@@ -112,6 +111,7 @@ func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "POST":
+		fallthrough
 	default:
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 	}

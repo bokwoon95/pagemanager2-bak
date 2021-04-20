@@ -20,6 +20,7 @@ type errorPageData struct {
 
 func (pm *PageManager) InternalServerError(w http.ResponseWriter, r *http.Request, serverErr error) {
 	var err error
+	w.WriteHeader(http.StatusInternalServerError)
 	data := errorPageData{
 		Title:  "500 Internal Server Error",
 		Header: "500 Internal Server Error",
@@ -29,7 +30,12 @@ func (pm *PageManager) InternalServerError(w http.ResponseWriter, r *http.Reques
 		hy.H("p.f5", nil, hy.Txt("URL: "+LocaleURL(r, ""))),
 		hy.H("pre.white-space-prewrap.word-wrap", nil, hy.Txt(erro.Sdump(serverErr))),
 	})
-	err = pm.executeTemplates(w, data, pagemanagerFS, "error_page.html")
+	t, err := template.ParseFS(pagemanagerFS, "error_page.html")
+	if err != nil {
+		io.WriteString(w, fmt.Errorf("%w: %s", serverErr, err).Error())
+		return
+	}
+	err = t.Execute(w, data)
 	if err != nil {
 		io.WriteString(w, fmt.Errorf("%w: %s", serverErr, err).Error())
 		return
@@ -38,6 +44,7 @@ func (pm *PageManager) InternalServerError(w http.ResponseWriter, r *http.Reques
 
 func (pm *PageManager) Unauthorized(w http.ResponseWriter, r *http.Request) {
 	var err error
+	w.WriteHeader(http.StatusUnauthorized)
 	data := errorPageData{
 		Title:  "401 Unauthorized",
 		Header: "401 Unauthorized",
@@ -53,7 +60,12 @@ func (pm *PageManager) Unauthorized(w http.ResponseWriter, r *http.Request) {
 	els.Append("p", nil, hy.H("a", hy.Attr{"href": "/pm-superadmin-login"}, hy.Txt("Log In as Superadmin")), hy.Txt("."))
 	els.Append("p", nil, hy.H("a", hy.Attr{"href": LocaleURL(r, "/")}, hy.Txt("Go Home")), hy.Txt("."))
 	data.ErrMsg, err = hy.MarshalElement(nil, els)
-	err = pm.executeTemplates(w, data, pagemanagerFS, "error_page.html")
+	t, err := template.ParseFS(pagemanagerFS, "error_page.html")
+	if err != nil {
+		io.WriteString(w, fmt.Errorf("403 Forbidden: %s", err).Error())
+		return
+	}
+	err = t.Execute(w, data)
 	if err != nil {
 		io.WriteString(w, fmt.Errorf("403 Forbidden: %s", err).Error())
 		return
@@ -62,6 +74,7 @@ func (pm *PageManager) Unauthorized(w http.ResponseWriter, r *http.Request) {
 
 func (pm *PageManager) Forbidden(w http.ResponseWriter, r *http.Request) {
 	var err error
+	w.WriteHeader(http.StatusForbidden)
 	data := errorPageData{
 		Title:  "403 Forbidden",
 		Header: "403 Forbidden",
@@ -70,7 +83,12 @@ func (pm *PageManager) Forbidden(w http.ResponseWriter, r *http.Request) {
 		hy.H("p", nil, hy.Txt("You are not authorized to do this action.")),
 		hy.H("p", nil, hy.H("a", hy.Attr{"href": LocaleURL(r, "/")}, hy.Txt("Go Home")), hy.Txt(".")),
 	})
-	err = pm.executeTemplates(w, data, pagemanagerFS, "error_page.html")
+	t, err := template.ParseFS(pagemanagerFS, "error_page.html")
+	if err != nil {
+		io.WriteString(w, fmt.Errorf("401 Unauthorized: %s", err).Error())
+		return
+	}
+	err = t.Execute(w, data)
 	if err != nil {
 		io.WriteString(w, fmt.Errorf("401 Unauthorized: %s", err).Error())
 		return

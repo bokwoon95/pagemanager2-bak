@@ -88,8 +88,8 @@ func New() (*PageManager, error) {
 		return pm, erro.Wrap(err)
 	}
 	err = sq.EnsureTables(pm.superadminDB, "sqlite3",
-		tables.NEW_SUPERADMIN(ctx, ""),
-		tables.NEW_KEYS(ctx, ""),
+		tables.NEW_SUPERADMIN(""),
+		tables.NEW_KEYS(""),
 	)
 	if err != nil {
 		return pm, erro.Wrap(err)
@@ -113,8 +113,7 @@ func (pm *PageManager) getKeys() (keys [][]byte, err error) {
 	if !pm.boxesInitialized() {
 		return nil, erro.Wrap(fmt.Errorf("lacking superadmin password"))
 	}
-	ctx := context.Background()
-	KEYS := tables.NEW_KEYS(ctx, "")
+	KEYS := tables.NEW_KEYS("")
 	_, err = sq.Fetch(pm.superadminDB, sq.SQLite.From(KEYS).OrderBy(KEYS.ORDER_NUM), func(row *sq.Row) error {
 		key := row.Bytes(KEYS.KEY_CIPHERTEXT)
 		return row.Accumulate(func() error {
@@ -131,9 +130,11 @@ func (pm *PageManager) getKeys() (keys [][]byte, err error) {
 func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/", next)
+	mux.HandleFunc(URLLogout, pm.logout)
 	mux.HandleFunc(URLLogin, pm.login)
 	mux.HandleFunc(URLSuperadminLogin, pm.superadminLogin)
 	mux.HandleFunc(URLDashboard, pm.dashboard)
+	mux.HandleFunc(URLCreatePage, pm.createPage)
 	mux.HandleFunc("/pm-test-encrypt", pm.testEncrypt)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/pm-themes/") ||
@@ -159,7 +160,7 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 		}
 		switch {
 		case !*flagNoSetup:
-			SUPERADMIN := tables.NEW_SUPERADMIN(r.Context(), "")
+			SUPERADMIN := tables.NEW_SUPERADMIN("")
 			superadminExists, err := sq.Exists(pm.superadminDB, sq.SQLite.From(SUPERADMIN))
 			if err != nil {
 				log.Println(erro.Wrap(err))
@@ -229,6 +230,16 @@ func Redirect(w http.ResponseWriter, r *http.Request, url string) {
 		w.Header().Set("X-Accel-Expires", "0")
 	}
 	http.Redirect(w, r, LocaleURL(r, url), http.StatusMovedPermanently)
+}
+
+func (pm *PageManager) RedirectToLogin(w http.ResponseWriter, r *http.Request) {
+	USERS := tables.NEW_USERS(r.Context(), "u")
+	exists, _ := sq.Exists(pm.dataDB, sq.SQLite.From(USERS).Where(USERS.USER_ID.NeInt(1)))
+	if exists {
+		Redirect(w, r, URLLogin)
+		return
+	}
+	Redirect(w, r, URLSuperadminLogin)
 }
 
 func (pm *PageManager) serveFile(w http.ResponseWriter, r *http.Request, name string) {
@@ -306,6 +317,7 @@ func (pm *PageManager) executeTemplates(w http.ResponseWriter, data interface{},
 	if err != nil {
 		return erro.Wrap(err)
 	}
+	files = append([]string{"common.html"}, files...)
 	for _, file := range files {
 		b, err = fs.ReadFile(fsys, file)
 		if err != nil {
@@ -321,7 +333,7 @@ func (pm *PageManager) executeTemplates(w http.ResponseWriter, data interface{},
 		buf.Reset()
 		bufpool.Put(buf)
 	}()
-	err = t.Execute(buf, data)
+	err = t.ExecuteTemplate(buf, file, data)
 	if err != nil {
 		return erro.Wrap(err)
 	}
@@ -385,7 +397,7 @@ func (pm *PageManager) testEncrypt(w http.ResponseWriter, r *http.Request) {
 	}
 	const secret = "secret"
 	if !pm.boxesInitialized() {
-		_ = hyforms.SetCookieValue(w, cookieSuperadminLoginRedirect, r.URL.Path, nil)
+		_ = hyforms.SetCookieValue(w, cookieLoginRedirect, LocaleURL(r, r.URL.Path), nil)
 		Redirect(w, r, URLSuperadminLogin)
 		return
 	}

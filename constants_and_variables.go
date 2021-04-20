@@ -11,7 +11,8 @@ import (
 // There's always a lighthouse. There's always a man. There's always a city.
 
 var (
-	ErrBoxesNotInitialized = errors.New("boxes not initialized")
+	ErrBoxesNotInitialized     = errors.New("boxes not initialized")
+	ErrInvalidLoginCredentials = errors.New("Invalid username/email or password")
 )
 
 type Route struct {
@@ -54,12 +55,13 @@ const (
 
 const (
 	URLLogin           = "/pm-login"
+	URLLogout          = "/pm-logout"
 	URLSuperadminLogin = "/pm-superadmin-login"
 	URLDashboard       = "/pm-dashboard"
-	URLViewPage        = "/pm-view-page"   // GET route=/url
-	URLEditPage        = "/pm-edit-page"   // GET,POST route=/url
-	URLCreatePage      = "/pm-create-page" // GET,POST route=/url
-	URLDeletePage      = "/pm-delete-page" // POST route=/url
+	URLViewPage        = "/pm-view-page"   // GET url=/url
+	URLEditPage        = "/pm-edit-page"   // GET,POST url=/url
+	URLCreatePage      = "/pm-create-page" // GET,POST url=/url
+	URLDeletePage      = "/pm-delete-page" // POST url=/url
 	// NOTE: after you delete, you aren't immediately redirected to the index
 	// page. Instead you are redirected to the same page with all the page
 	// details filled in, with a message saying "this page is deleted" together
@@ -68,8 +70,9 @@ const (
 )
 
 const (
-	cookieSuperadminSession       = "pm-superadmin-session"
-	cookieSuperadminLoginRedirect = "pm-superadmin-login-redirect"
+	cookieSession        = "pm-session"
+	cookieLoginRedirect  = "pm-login-redirect"
+	cookieLogoutRedirect = "pm-logout-redirect"
 )
 
 const (

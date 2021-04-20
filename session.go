@@ -137,7 +137,7 @@ func (pm *PageManager) newSession(w http.ResponseWriter, userID int64, sessionDa
 	}
 	http.SetCookie(w, &http.Cookie{
 		Path:  "/",
-		Name:  "pm-session",
+		Name:  cookieSession,
 		Value: b64SessionToken,
 	})
 	return nil
@@ -147,13 +147,13 @@ func (pm *PageManager) getSession(w http.ResponseWriter, r *http.Request) (user 
 	if !pm.boxesInitialized() {
 		return user, ErrBoxesNotInitialized
 	}
-	c, _ := r.Cookie("pm-session")
+	c, _ := r.Cookie(cookieSession)
 	if c == nil {
 		return user, nil
 	}
 	sessionToken, err := base64.RawURLEncoding.DecodeString(c.Value)
 	if err != nil {
-		http.SetCookie(w, &http.Cookie{Name: "pm-session", MaxAge: -1})
+		http.SetCookie(w, &http.Cookie{Name: cookieSession, MaxAge: -1})
 		return user, erro.Wrap(err)
 	}
 	sessionHashes, err := pm.publicBox.HashAll(sessionToken)
@@ -222,4 +222,37 @@ func (pm *PageManager) getUser(w http.ResponseWriter, r *http.Request) SessionUs
 		user.Valid = false
 	}
 	return user
+}
+
+func (pm *PageManager) deleteSession(w http.ResponseWriter, r *http.Request) error {
+	defer http.SetCookie(w, &http.Cookie{Path: "/", Name: cookieSession, MaxAge: -1})
+	if !pm.boxesInitialized() {
+		return ErrBoxesNotInitialized
+	}
+	c, _ := r.Cookie(cookieSession)
+	if c == nil {
+		return nil
+	}
+	sessionToken, err := base64.RawURLEncoding.DecodeString(c.Value)
+	if err != nil {
+		http.SetCookie(w, &http.Cookie{Name: cookieSession, MaxAge: -1})
+		return erro.Wrap(err)
+	}
+	sessionHashes, err := pm.publicBox.HashAll(sessionToken)
+	if err != nil {
+		return erro.Wrap(err)
+	}
+	var b64SessionHashes []string
+	for _, sessionHash := range sessionHashes {
+		b64SessionHashes = append(b64SessionHashes, base64.RawURLEncoding.EncodeToString(sessionHash))
+	}
+	SESSIONS := tables.NEW_SESSIONS(r.Context(), "s")
+	_, _, err = sq.Exec(pm.dataDB, sq.SQLite.
+		DeleteFrom(SESSIONS).
+		Where(SESSIONS.SESSION_HASH.In(b64SessionHashes)), 0,
+	)
+	if err != nil {
+		return erro.Wrap(err)
+	}
+	return nil
 }

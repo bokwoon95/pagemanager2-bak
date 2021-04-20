@@ -406,10 +406,9 @@ func (pm *PageManager) boxesInitialized() bool {
 }
 
 func (pm *PageManager) initializeBoxes(password []byte) error {
-	ctx := context.Background()
 	var passwordHash []byte
 	var keyParams []byte
-	SUPERADMIN := tables.NEW_SUPERADMIN(ctx, "")
+	SUPERADMIN := tables.NEW_SUPERADMIN("")
 	rowCount, err := sq.Fetch(pm.superadminDB, sq.SQLite.
 		From(SUPERADMIN).
 		Where(SUPERADMIN.ORDER_NUM.EqInt(1)),
@@ -427,7 +426,7 @@ func (pm *PageManager) initializeBoxes(password []byte) error {
 	}
 	err = keyderiv.CompareHashAndPassword(passwordHash, password)
 	if err != nil {
-		return fmt.Errorf("Invalid password")
+		return ErrInvalidLoginCredentials
 	}
 	var params keyderiv.Params
 	err = params.UnmarshalBinary(keyParams)

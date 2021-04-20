@@ -1,0 +1,16 @@
+{{ define "navbar" }}
+<nav id="pm-superadmin-navbar">
+  <div class="mh2"><a href="/pm-dashboard" class="no-underline white pointer underline-hover">PageManager</a></div>
+  <div class="mh2"><button form="pm-logout" class="pointer">Log out</button></div>
+  <form id="pm-logout" method="POST" action="/pm-logout" hidden></form>
+</nav>
+{{ end }}
+
+{{ define "head" }}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/pm-plugins/pagemanager/tachyons.css">
+<link rel="stylesheet" href="/pm-plugins/pagemanager/style.css">
+{{ end }}
+
+{{ define "bodyclass" }}bg-light-gray sans-serif{{ end }}

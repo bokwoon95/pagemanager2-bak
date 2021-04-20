@@ -7,40 +7,42 @@ import (
 	"github.com/bokwoon95/pagemanager/erro"
 	"github.com/bokwoon95/pagemanager/hy"
 	"github.com/bokwoon95/pagemanager/hyforms"
+	"github.com/bokwoon95/pagemanager/sq"
+	"github.com/bokwoon95/pagemanager/tables"
 )
 
 type superadminLoginData struct {
-	LoginCode string
-	Password  string
+	LoginID  string
+	Password string
 }
 
 func (d *superadminLoginData) LoginForm(form *hyforms.Form) {
-	logincode := form.
-		Text("pm-login-code", d.Password).
-		Set("#pm-login-code.bg-near-white.pa2.w-100", hy.Attr{})
+	loginID := form.
+		Text("pm-login-id", d.LoginID).
+		Set("#pm-login-id.bg-near-white.pa2.w-100", hy.Attr{})
 	password := form.
 		Input("password", "pm-password", d.Password).
 		Set("#pm-password.bg-near-white.pa2.w-100", hy.Attr{"required": hy.Enabled})
 
 	form.Set(".bg-washed-blue.center-form", hy.Attr{"method": "POST"})
-	form.Append("div.mt3.mb1", nil,
-		hy.H("label.pointer.i", hy.Attr{"for": logincode.ID()}, hy.Txt("Superadmin Login Code:")))
-	form.Append("div", nil, logincode)
-	if errMsgs := form.ErrMsgs(); len(errMsgs) > 0 {
-		for _, errMsg := range errMsgs {
-			form.Append("div.red", nil, hy.Txt(errMsg))
-		}
+	for _, errMsg := range form.ErrMsgs() {
+		form.Append("div.red", nil, hy.Txt(errMsg))
 	}
-	form.Append("div.mt3.mb1", nil,
-		hy.H("label.pointer.i", hy.Attr{"for": password.ID()}, hy.Txt("Superadmin Password:")))
-	form.Append("div", nil, password)
+	form.AppendElements(
+		hy.H("div.mt3.mb1", nil, hy.H("label.pointer.i", hy.Attr{"for": loginID.ID()}, hy.Txt("Email or Username: "))),
+		hy.H("div", nil, loginID),
+	)
+	form.AppendElements(
+		hy.H("div.mt3.mb1", nil, hy.H("label.pointer.i", hy.Attr{"for": password.ID()}, hy.Txt("Superadmin Password:"))),
+		hy.H("div", nil, password),
+	)
 	if hyforms.ErrMsgsMatch(password.ErrMsgs(), hyforms.RequiredErrMsg) {
 		form.Append("div.f7.red", nil, hy.Txt(hyforms.RequiredErrMsg))
 	}
 	form.Append("div.mt3", nil, hy.H("button.pointer.pa2", hy.Attr{"type": "submit"}, hy.Txt("Log In")))
 
 	form.Unmarshal(func() {
-		d.LoginCode = logincode.Value()
+		d.LoginID = loginID.Value()
 		d.Password = password.Validate(hyforms.Required).Value()
 	})
 }
@@ -61,8 +63,8 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		tdata := templateData{
-			Title:  "PageManager Login",
-			Header: "PageManager Login",
+			Title:  "PageManager Superadmin Login",
+			Header: "PageManager Superadmin Login",
 		}
 		tdata.Form, err = hyforms.MarshalForm(nil, w, r, data.LoginForm)
 		if err != nil {
@@ -80,10 +82,25 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
 			return
 		}
+		SUPERADMIN := tables.NEW_SUPERADMIN("")
+		exists, err := sq.Exists(pm.superadminDB, sq.SQLite.From(SUPERADMIN).Where(
+			SUPERADMIN.ORDER_NUM.EqInt(1),
+			SUPERADMIN.LOGIN_ID.EqString(data.LoginID),
+		))
+		if err != nil {
+			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, err.Error())
+			hyforms.Redirect(w, r, LocaleURL(r, r.URL.Path), errMsgs)
+			return
+		}
+		if !exists {
+			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, ErrInvalidLoginCredentials.Error())
+			hyforms.Redirect(w, r, LocaleURL(r, r.URL.Path), errMsgs)
+			return
+		}
 		err = pm.initializeBoxes([]byte(data.Password))
 		if err != nil {
 			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, err.Error())
-			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
+			hyforms.Redirect(w, r, LocaleURL(r, r.URL.Path), errMsgs)
 			return
 		}
 		err = pm.newSession(w, 1, nil)
@@ -92,7 +109,7 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var redirectURL string
-		_ = hyforms.GetCookieValue(w, r, cookieSuperadminLoginRedirect, &redirectURL)
+		_ = hyforms.GetCookieValue(w, r, cookieLoginRedirect, &redirectURL)
 		if redirectURL != "" {
 			Redirect(w, r, redirectURL)
 			return

@@ -1,13 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="/pm-plugins/pagemanager/tachyons.css">
-  <link rel="stylesheet" href="/pm-plugins/pagemanager/style.css">
+  {{ template "head" .}}
   <title>{{ .Title }}</title>
 </head>
-<body class="bg-light-gray sans-serif">
+<body class="{{ template `bodyclass` }}">
   <div class="center-form-container">
     <h3>{{ .Header }}</h3>
     {{ .Form }}
