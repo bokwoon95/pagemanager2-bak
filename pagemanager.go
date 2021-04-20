@@ -237,9 +237,25 @@ func Redirect(w http.ResponseWriter, r *http.Request, url string) {
 
 func (pm *PageManager) RedirectToLogin(w http.ResponseWriter, r *http.Request) {
 	USERS := tables.NEW_USERS(r.Context(), "u")
-	exists, _ := sq.Exists(pm.dataDB, sq.SQLite.From(USERS).Where(USERS.USER_ID.NeInt(1)))
-	if exists {
+	usersExist, _ := sq.Exists(pm.dataDB, sq.SQLite.From(USERS).Where(USERS.USER_ID.NeInt(1)))
+	if usersExist {
 		Redirect(w, r, URLLogin)
+		return
+	}
+	SUPERADMIN := tables.NEW_SUPERADMIN("sa")
+	superadminExists, _ := sq.Exists(pm.superadminDB, sq.SQLite.
+		From(SUPERADMIN).
+		Where(
+			SUPERADMIN.PASSWORD_HASH.IsNotNull(),
+			SUPERADMIN.KEY_PARAMS.IsNotNull(),
+		),
+	)
+	if !superadminExists {
+		if *flagNoSetup {
+			pm.InternalServerError(w, r, erro.Wrap(fmt.Errorf("missing superadmin")))
+		} else {
+			pm.superadminSetup(w, r)
+		}
 		return
 	}
 	Redirect(w, r, URLSuperadminLogin)
