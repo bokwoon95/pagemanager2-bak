@@ -186,6 +186,7 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 	_, _, err = sq.Exec(db, sq.SQLite.
 		InsertInto(p).
 		Valuesx(func(col *sq.Column) error {
+			col.SetString(p.PAGE_TYPE, PageTypeContent)
 			col.SetString(p.URL, `/hello/`)
 			col.SetString(p.CONTENT, `<h1>This is hello</h1>`)
 			return nil
@@ -201,6 +202,7 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 	_, _, err = sq.Exec(db, sq.SQLite.
 		InsertInto(p).
 		Valuesx(func(col *sq.Column) error {
+			col.SetString(p.PAGE_TYPE, PageTypePlugin)
 			col.SetString(p.URL, `/goodbye`)
 			col.SetString(p.HANDLER_URL, `/`)
 			return nil
@@ -222,6 +224,7 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 		InsertInto(p).
 		Valuesx(func(col *sq.Column) error {
 			for _, t := range templates {
+				col.SetString(p.PAGE_TYPE, PageTypeTemplate)
 				col.SetString(p.URL, t.url)
 				col.SetString(p.THEME_PATH, t.theme_path)
 				col.SetString(p.TEMPLATE, t.template)

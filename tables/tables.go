@@ -39,7 +39,8 @@ func NEW_KEYS(alias string) PM_KEYS {
 
 type PM_PAGES struct {
 	sq.TableInfo
-	URL sq.StringField `sq:"type=TEXT misc=NOT_NULL,PRIMARY_KEY"`
+	URL       sq.StringField `sq:"type=TEXT misc=NOT_NULL,PRIMARY_KEY"`
+	PAGE_TYPE sq.StringField
 	// 404 Not Found
 	DISABLED sq.BooleanField
 	// 301 Moved Permanently

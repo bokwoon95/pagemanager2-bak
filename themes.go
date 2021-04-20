@@ -190,21 +190,21 @@ func (t *theme) Unmarshal(data interface{}) {
 	}
 }
 
-func (pm *PageManager) serveTemplate(w http.ResponseWriter, r *http.Request, route Route) {
+func (pm *PageManager) serveTemplate(w http.ResponseWriter, r *http.Request, page Page) {
 	pm.themesMutex.RLock()
-	theme, ok := pm.themes[route.ThemePath.String]
+	theme, ok := pm.themes[page.ThemePath]
 	pm.themesMutex.RUnlock()
 	if !ok {
-		http.Error(w, erro.Sdump(fmt.Errorf("No such theme called %s", route.ThemePath.String)), http.StatusInternalServerError)
+		http.Error(w, erro.Sdump(fmt.Errorf("No such theme called %s", page.ThemePath)), http.StatusInternalServerError)
 		return
 	}
 	if theme.err != nil {
 		http.Error(w, erro.Sdump(theme.err), http.StatusInternalServerError)
 		return
 	}
-	themeTemplate, ok := theme.themeTemplates[route.Template.String]
+	themeTemplate, ok := theme.themeTemplates[page.Template]
 	if !ok {
-		http.Error(w, erro.Sdump(fmt.Errorf("No such template called %s for theme %s", route.Template.String, route.ThemePath.String)), http.StatusInternalServerError)
+		http.Error(w, erro.Sdump(fmt.Errorf("No such template called %s for theme %s", page.Template, page.ThemePath)), http.StatusInternalServerError)
 		return
 	}
 	if len(themeTemplate.HTML) == 0 {
@@ -234,8 +234,8 @@ func (pm *PageManager) serveTemplate(w http.ResponseWriter, r *http.Request, rou
 	data := Data{
 		Page: PageData{
 			Ctx:       r.Context(),
-			URL:       route.URL.String,
-			DataID:    route.URL.String,
+			URL:       page.URL,
+			DataID:    page.URL,
 			cssAssets: themeTemplate.CSS,
 			jsAssets:  themeTemplate.JS,
 			csp:       themeTemplate.ContentSecurityPolicy,

@@ -13,6 +13,34 @@ import (
 	"github.com/bokwoon95/pagemanager/tables"
 )
 
+type Page struct {
+	Valid       bool
+	URL         string
+	PageType    string
+	Disabled    bool
+	RedirectURL string
+	HandlerURL  string
+	Content     string
+	ThemePath   string
+	Template    string
+}
+
+func (page *Page) RowMapper(p tables.PM_PAGES) func(*sq.Row) error {
+	return func(row *sq.Row) error {
+		url := row.NullString(p.URL)
+		page.Valid = url.Valid
+		page.URL = url.String
+		page.PageType = row.String(p.PAGE_TYPE)
+		page.Disabled = row.Bool(p.DISABLED)
+		page.RedirectURL = row.String(p.REDIRECT_URL)
+		page.HandlerURL = row.String(p.HANDLER_URL)
+		page.Content = row.String(p.CONTENT)
+		page.ThemePath = row.String(p.THEME_PATH)
+		page.Template = row.String(p.TEMPLATE)
+		return nil
+	}
+}
+
 type PageData struct {
 	Ctx        context.Context
 	URL        string

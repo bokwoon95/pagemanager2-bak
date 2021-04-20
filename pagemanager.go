@@ -143,7 +143,7 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 			pm.serveFile(w, r, r.URL.Path)
 			return
 		}
-		route, localeCode, err := pm.getRoute(r.Context(), r.URL.Path)
+		page, localeCode, err := pm.getPage(r.Context(), r.URL.Path)
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
@@ -153,7 +153,7 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 		r2 = r2.WithContext(context.WithValue(r2.Context(), ctxKeyLocaleCode, localeCode))
 		r2.URL = &url.URL{}
 		*r2.URL = *r.URL
-		r2.URL.Path = route.URL.String
+		r2.URL.Path = page.URL
 		user, err := pm.getSession(w, r)
 		if err == nil {
 			r2 = r2.WithContext(context.WithValue(r2.Context(), ctxKeyUser, user))
@@ -178,21 +178,24 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 			pm.superadminSetup(w, r2)
 			return
 		}
-		if route.Disabled.Valid && route.Disabled.Bool {
-			http.NotFound(w, r)
+		switch page.PageType {
+		case PageTypeDisabled:
+			if page.Disabled {
+				http.NotFound(w, r)
+				return
+			}
+		case PageTypeRedirect:
+			Redirect(w, r, page.RedirectURL)
 			return
-		}
-		if route.HandlerURL.Valid {
-			r2.URL.Path = route.HandlerURL.String
+		case PageTypePlugin:
+			r2.URL.Path = page.HandlerURL
 			mux.ServeHTTP(w, r2)
 			return
-		}
-		if route.Content.Valid {
-			io.WriteString(w, route.Content.String)
+		case PageTypeContent:
+			io.WriteString(w, page.Content)
 			return
-		}
-		if route.ThemePath.Valid && route.Template.Valid {
-			pm.serveTemplate(w, r2, route)
+		case PageTypeTemplate:
+			pm.serveTemplate(w, r2, page)
 			return
 		}
 		mux.ServeHTTP(w, r2)
@@ -341,7 +344,7 @@ func (pm *PageManager) executeTemplates(w http.ResponseWriter, data interface{},
 	return nil
 }
 
-func (pm *PageManager) getRoute(ctx context.Context, path string) (route Route, localeCode string, err error) {
+func (pm *PageManager) getPage(ctx context.Context, path string) (page Page, localeCode string, err error) {
 	elems := strings.SplitN(path, "/", 3) // because first character of path is always '/', we ignore the first element
 	if len(elems) >= 2 {
 		head := elems[1]
@@ -358,36 +361,28 @@ func (pm *PageManager) getRoute(ctx context.Context, path string) (route Route, 
 		}
 	}
 	var negapath string
-	if strings.HasSuffix(path, "/") {
+	if path == "/" {
+		negapath = "/"
+	} else if strings.HasSuffix(path, "/") {
 		negapath = strings.TrimRight(path, "/")
 	} else {
 		negapath = path + "/"
 	}
-	p := tables.NEW_PAGES(ctx, "p")
+	PAGES := tables.NEW_PAGES(ctx, "p")
 	_, err = sq.Fetch(pm.dataDB, sq.SQLite.
-		From(p).
-		Where(p.URL.In([]string{path, negapath})).
-		OrderBy(sq.Case(p.URL).When(path, 1).Else(2)).
+		From(PAGES).
+		Where(PAGES.URL.In([]string{path, negapath})).
+		OrderBy(sq.Case(PAGES.URL).When(path, 1).Else(2)).
 		Limit(1),
-		func(row *sq.Row) error {
-			route.URL = row.NullString(p.URL)
-			route.Disabled = row.NullBool(p.DISABLED)
-			route.RedirectURL = row.NullString(p.REDIRECT_URL)
-			route.HandlerURL = row.NullString(p.HANDLER_URL)
-			route.Content = row.NullString(p.CONTENT)
-			route.ThemePath = row.NullString(p.THEME_PATH)
-			route.Template = row.NullString(p.TEMPLATE)
-			return nil
-		},
+		page.RowMapper(PAGES),
 	)
 	if err != nil {
-		return route, localeCode, erro.Wrap(err)
+		return page, localeCode, erro.Wrap(err)
 	}
-	if !route.URL.Valid {
-		route.URL.String = path
-		route.URL.Valid = true
+	if !page.Valid {
+		page.URL = path
 	}
-	return route, localeCode, nil
+	return page, localeCode, nil
 }
 
 func (pm *PageManager) testEncrypt(w http.ResponseWriter, r *http.Request) {

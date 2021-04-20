@@ -13,12 +13,12 @@ import (
 )
 
 type dashboardData struct {
-	Routes []Route
+	Pages []Page
 }
 
 func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 	type templateData struct {
-		Routes template.HTML
+		Pages template.HTML
 	}
 	r.ParseForm()
 	var err error
@@ -37,12 +37,12 @@ func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 		data := dashboardData{}
 		p := tables.NEW_PAGES(r.Context(), "r")
 		_, err = sq.Fetch(pm.dataDB, sq.SQLite.From(p).OrderBy(p.URL), func(row *sq.Row) error {
-			var route Route
-			if err := route.RowMapper(p)(row); err != nil {
+			var page Page
+			if err := page.RowMapper(p)(row); err != nil {
 				return erro.Wrap(err)
 			}
 			return row.Accumulate(func() error {
-				data.Routes = append(data.Routes, route)
+				data.Pages = append(data.Pages, page)
 				return nil
 			})
 		})
@@ -57,42 +57,43 @@ func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 		}
 		var els hy.Elements
 		els.Append("div.mv2", nil, hy.H("a", hy.Attr{"href": URLCreatePage}, hy.Txt("create")))
-		for _, route := range data.Routes {
+		for _, page := range data.Pages {
 			div := hy.H("div.mv2", nil)
-			div.Append("div", nil, hy.Txt("URL: "), hy.Txt(route.URL.String))
-			switch {
-			case !route.URL.Valid:
+			div.Append("div", nil, hy.Txt("URL: "), hy.Txt(page.URL))
+			if page.URL == "" {
 				continue
-			case route.Disabled.Valid:
+			}
+			switch page.PageType {
+			case PageTypeDisabled:
 				div.Append("div", nil,
 					hy.Txt("Disabled: "),
-					hy.Txt(route.Disabled.Bool),
-					hy.H("a", hy.Attr{"href": URLEditPage + "?route=" + route.URL.String}, hy.Txt("edit")),
+					hy.Txt(page.Disabled),
+					hy.H("a", hy.Attr{"href": URLEditPage + "?url=" + page.URL}, hy.Txt("edit")),
 				)
-			case route.RedirectURL.Valid:
+			case PageTypeRedirect:
 				div.Append("div", nil,
 					hy.Txt("RedirectURL: "),
-					hy.Txt(route.RedirectURL.String),
-					hy.H("div", nil, hy.H("a", hy.Attr{"href": URLEditPage + "?route=" + route.URL.String}, hy.Txt("edit"))),
+					hy.Txt(page.RedirectURL),
+					hy.H("div", nil, hy.H("a", hy.Attr{"href": URLEditPage + "?url=" + page.URL}, hy.Txt("edit"))),
 				)
-			case route.HandlerURL.Valid:
+			case PageTypePlugin:
 				div.Append("div", nil,
 					hy.Txt("HandlerURL: "),
-					hy.Txt(route.HandlerURL.String),
-					hy.H("div", nil, hy.H("a", hy.Attr{"href": URLEditPage + "?route=" + route.URL.String}, hy.Txt("edit"))),
+					hy.Txt(page.HandlerURL),
+					hy.H("div", nil, hy.H("a", hy.Attr{"href": URLEditPage + "?url=" + page.URL}, hy.Txt("edit"))),
 				)
-			case route.Content.Valid:
+			case PageTypeContent:
 				div.Append("div", nil,
 					hy.Txt("Content: &lt;some content&gt;"),
-					hy.H("div", nil, hy.H("a", hy.Attr{"href": URLEditPage + "?route=" + route.URL.String}, hy.Txt("edit"))),
+					hy.H("div", nil, hy.H("a", hy.Attr{"href": URLEditPage + "?url=" + page.URL}, hy.Txt("edit"))),
 				)
-			case route.ThemePath.Valid && route.Template.Valid:
+			case PageTypeTemplate:
 				div.Append("div", nil,
 					hy.Txt("ThemePath: "),
-					hy.Txt(route.ThemePath.String),
+					hy.Txt(page.ThemePath),
 					hy.Txt(", Template: "),
-					hy.Txt(route.Template.String),
-					hy.H("div", nil, hy.H("a", hy.Attr{"href": URLEditPage + "?route=" + route.URL.String}, hy.Txt("edit"))),
+					hy.Txt(page.Template),
+					hy.H("div", nil, hy.H("a", hy.Attr{"href": URLEditPage + "?url=" + page.URL}, hy.Txt("edit"))),
 				)
 			default:
 				continue
@@ -100,7 +101,7 @@ func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 			els.AppendElements(div)
 		}
 		var tdata templateData
-		tdata.Routes, err = hy.MarshalElement(nil, els)
+		tdata.Pages, err = hy.MarshalElement(nil, els)
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return

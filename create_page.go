@@ -9,6 +9,8 @@ import (
 )
 
 type createPageData struct {
+	URL      string
+	Disabled bool
 }
 
 func (pm *PageManager) createPage(w http.ResponseWriter, r *http.Request) {
