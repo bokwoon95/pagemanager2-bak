@@ -162,11 +162,7 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 		switch {
 		case !*flagNoSetup:
 			SUPERADMIN := tables.NEW_SUPERADMIN("")
-			superadminExists, err := sq.Exists(pm.superadminDB, sq.SQLite.From(SUPERADMIN))
-			if err != nil {
-				log.Println(erro.Wrap(err))
-				break
-			}
+			superadminExists, _ := sq.Exists(pm.superadminDB, sq.SQLite.From(SUPERADMIN))
 			if superadminExists {
 				if !pm.boxesInitialized() && *flagPass != "" {
 					err = pm.initializeBoxes([]byte(*flagPass))

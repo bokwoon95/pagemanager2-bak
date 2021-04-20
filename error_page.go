@@ -27,7 +27,7 @@ func (pm *PageManager) InternalServerError(w http.ResponseWriter, r *http.Reques
 	}
 	data.ErrMsg, _ = hy.Marshal(nil, hy.Elements{
 		hy.H("p.f4", nil, hy.Txt("Something went wrong, here is the error trace (read top down)")),
-		hy.H("p.f5", nil, hy.Txt("URL: "+LocaleURL(r, ""))),
+		hy.H("p.f5", nil, hy.Txt("URL:", LocaleURL(r, ""))),
 		hy.H("pre.white-space-prewrap.word-wrap", nil, hy.Txt(erro.Sdump(serverErr))),
 	})
 	t, err := template.ParseFS(pagemanagerFS, "error_page.html")
