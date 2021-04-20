@@ -7,8 +7,6 @@ import (
 	"github.com/bokwoon95/erro"
 	"github.com/bokwoon95/pagemanager/hy"
 	"github.com/bokwoon95/pagemanager/hyforms"
-	"github.com/bokwoon95/pagemanager/sq"
-	"github.com/bokwoon95/pagemanager/tables"
 )
 
 type superadminLoginData struct {
@@ -42,10 +40,9 @@ func (d *superadminLoginData) LoginForm(form *hyforms.Form) {
 
 func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 	type templateData struct {
-		Title    string
-		Header   template.HTML
-		Form     template.HTML
-		HasUsers bool
+		Title  string
+		Header template.HTML
+		Form   template.HTML
 	}
 	data := &superadminLoginData{}
 	var err error
@@ -65,8 +62,6 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
-		USERS := tables.NEW_USERS(r.Context(), "u")
-		tdata.HasUsers, _ = sq.Exists(pm.dataDB, sq.SQLite.From(USERS).Where(USERS.USER_ID.NeInt(1)))
 		err = pm.executeTemplates(w, tdata, pagemanagerFS, "superadmin_login.html")
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))

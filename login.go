@@ -7,6 +7,8 @@ import (
 	"github.com/bokwoon95/erro"
 	"github.com/bokwoon95/pagemanager/hy"
 	"github.com/bokwoon95/pagemanager/hyforms"
+	"github.com/bokwoon95/pagemanager/keyderiv"
+	"github.com/bokwoon95/pagemanager/sq"
 	"github.com/bokwoon95/pagemanager/tables"
 )
 
@@ -84,19 +86,35 @@ func (pm *PageManager) login(w http.ResponseWriter, r *http.Request) {
 			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
 			return
 		}
+		var userID int64
 		var passwordHash []byte
 		USERS := tables.NEW_USERS(r.Context(), "u")
 		rowCount, err := sq.Fetch(pm.superadminDB, sq.SQLite.
 			From(USERS).
-			Where(USERS.LOGIN_ID.Eq(data.LoginID)).
+			Where(USERS.LOGIN_ID.EqString(data.LoginID)),
+			func(row *sq.Row) error {
+				userID = row.Int64(USERS.USER_ID)
+				passwordHash = row.Bytes(USERS.PASSWORD_HASH)
+				return nil
+			},
 		)
-		err = pm.initializeBoxes([]byte(data.Password))
 		if err != nil {
 			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, err.Error())
 			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
 			return
 		}
-		err = pm.newSession(w, 1, nil)
+		if rowCount == 0 {
+			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, "The login ID or password is incorrect")
+			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
+			return
+		}
+		err = keyderiv.CompareHashAndPassword(passwordHash, []byte(data.Password))
+		if err != nil {
+			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, "The login ID or password is incorrect")
+			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
+			return
+		}
+		err = pm.newSession(w, userID, nil)
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return

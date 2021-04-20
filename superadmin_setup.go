@@ -24,6 +24,12 @@ type superadminSetupData struct {
 
 func (d *superadminSetupData) setupForm(form *hyforms.Form) {
 	const passwordNotMatch = "passwords do not match"
+	loginCode := form. // no! it is not an input. instead it is a fixed piece of text that changes every refresh
+		Text("pm-login-code", d.LoginCode).
+		Set("#pm-password.bg-near-white.pa2.w-100", hy.Attr{
+			"required": hy.Enabled,
+			"title":    "Login Code",
+		})
 	password := form.
 		Input("password", "pm-password", d.Password).
 		Set("#pm-password.bg-near-white.pa2.w-100", hy.Attr{
@@ -57,6 +63,7 @@ func (d *superadminSetupData) setupForm(form *hyforms.Form) {
 	form.Append("div.mt3", nil, hy.H("button.pointer.pa2", hy.Attr{"type": "submit"}, hy.Txt("Create Superadmin")))
 
 	form.Unmarshal(func() {
+		d.LoginCode = loginCode.Validate(hyforms.Required).Value()
 		d.Password = password.Validate(hyforms.Required).Value()
 		d.ConfirmPassword = confirmPassword.Value()
 		if d.ConfirmPassword != d.Password {
