@@ -31,7 +31,7 @@ func Test_SelectInput(t *testing.T) {
 			}},
 		})
 		sel.Set("#my-select", nil)
-		got, err := hy.MarshalElement(nil, sel)
+		got, err := hy.Marshal(nil, sel)
 		is.NoErr(err)
 		want := `<select id="my-select">` +
 			`<option value="0">Option 0</option>` +

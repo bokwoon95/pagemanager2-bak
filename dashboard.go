@@ -101,7 +101,7 @@ func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 			els.AppendElements(div)
 		}
 		var tdata templateData
-		tdata.Pages, err = hy.MarshalElement(nil, els)
+		tdata.Pages, err = hy.Marshal(nil, els)
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return

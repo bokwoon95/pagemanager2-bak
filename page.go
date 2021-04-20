@@ -70,7 +70,7 @@ func (pg PageData) CSS() (template.HTML, error) {
 		}
 		els = append(els, hy.H("link[rel=stylesheet]", hy.Attr{"href": asset.Path}))
 	}
-	return hy.MarshalElement(nil, els)
+	return hy.Marshal(nil, els)
 }
 
 func (pg PageData) JS() (template.HTML, error) {
@@ -86,7 +86,7 @@ func (pg PageData) JS() (template.HTML, error) {
 		}
 		els = append(els, hy.H("script", hy.Attr{"src": asset.Path}))
 	}
-	return hy.MarshalElement(nil, els)
+	return hy.Marshal(nil, els)
 }
 
 func (pg PageData) ContentSecurityPolicy() template.HTML {

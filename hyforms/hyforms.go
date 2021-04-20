@@ -68,7 +68,7 @@ func MarshalForm(s hy.Sanitizer, w http.ResponseWriter, r *http.Request, fn func
 	if len(form.marshalErrMsgs) > 0 {
 		return "", fmt.Errorf("marshal errors %v", form.marshalErrMsgs)
 	}
-	output, err := hy.MarshalElement(s, form)
+	output, err := hy.Marshal(s, form)
 	if err != nil {
 		return output, err
 	}

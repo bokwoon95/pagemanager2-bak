@@ -290,7 +290,7 @@ func AppendAttributes(buf *strings.Builder, attrs Attributes) {
 	}
 }
 
-func MarshalElement(s Sanitizer, el Element) (template.HTML, error) {
+func Marshal(s Sanitizer, el Element) (template.HTML, error) {
 	buf := bufpool.Get().(*strings.Builder)
 	defer func() {
 		buf.Reset()
@@ -305,20 +305,4 @@ func MarshalElement(s Sanitizer, el Element) (template.HTML, error) {
 	}
 	output := s.Sanitize(buf.String())
 	return template.HTML(output), nil
-}
-
-type ElementMap map[*template.HTML]Element
-
-func MarshalElements(s Sanitizer, elements map[*template.HTML]Element) error {
-	var err error
-	for dest, element := range elements {
-		if dest == nil {
-			continue
-		}
-		*dest, err = MarshalElement(s, element)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }

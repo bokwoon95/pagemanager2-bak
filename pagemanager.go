@@ -180,14 +180,8 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 			return
 		}
 		switch page.PageType {
-		case PageTypeDisabled:
-			if page.Disabled {
-				http.NotFound(w, r)
-				return
-			}
-		case PageTypeRedirect:
-			Redirect(w, r, page.RedirectURL)
-			return
+		case PageTypeTemplate:
+			pm.serveTemplate(w, r2, page.ThemePath, page.TemplateName)
 		case PageTypePlugin:
 			if page.PluginName == "" || page.HandlerName == "" {
 				pm.InternalServerError(w, r, erro.Wrap(fmt.Errorf("empty PluginName or HandlerName")))
@@ -199,15 +193,19 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 				return
 			}
 			handler.ServeHTTP(w, r2)
-			return
 		case PageTypeContent:
 			io.WriteString(w, page.Content)
-			return
-		case PageTypeTemplate:
-			pm.serveTemplate(w, r2, page.ThemePath, page.TemplateName)
-			return
+		case PageTypeRedirect:
+			Redirect(w, r, page.RedirectURL)
+		case PageTypeDisabled:
+			if page.Disabled {
+				http.NotFound(w, r)
+				return
+			}
+			fallthrough
+		default:
+			mux.ServeHTTP(w, r2)
 		}
-		mux.ServeHTTP(w, r2)
 	})
 }
 
