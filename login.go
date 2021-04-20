@@ -89,7 +89,7 @@ func (pm *PageManager) login(w http.ResponseWriter, r *http.Request) {
 		var userID int64
 		var passwordHash []byte
 		USERS := tables.NEW_USERS(r.Context(), "u")
-		rowCount, err := sq.Fetch(pm.superadminDB, sq.SQLite.
+		rowCount, err := sq.Fetch(pm.dataDB, sq.SQLite.
 			From(USERS).
 			Where(USERS.LOGIN_ID.EqString(data.LoginID)),
 			func(row *sq.Row) error {
@@ -104,13 +104,13 @@ func (pm *PageManager) login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if rowCount == 0 {
-			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, "The login ID or password is incorrect")
+			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, ErrInvalidLoginCredentials.Error())
 			hyforms.Redirect(w, r, LocaleURL(r, r.URL.Path), errMsgs)
 			return
 		}
 		err = keyderiv.CompareHashAndPassword(passwordHash, []byte(data.Password))
 		if err != nil {
-			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, "The login ID or password is incorrect")
+			errMsgs.FormErrMsgs = append(errMsgs.FormErrMsgs, ErrInvalidLoginCredentials.Error())
 			hyforms.Redirect(w, r, LocaleURL(r, r.URL.Path), errMsgs)
 			return
 		}
