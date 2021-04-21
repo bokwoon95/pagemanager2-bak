@@ -17,7 +17,11 @@ type createPageData struct {
 }
 
 func (data *createPageData) Form(form *hyforms.Form) {
-	url := form.Text("url", data.URL)
+	var urlValue string
+	if hyforms.Validate(data.URL, hyforms.IsRelativeURL) == nil {
+		urlValue = data.URL
+	}
+	url := form.Text("url", urlValue)
 	pageType := form.Select("page-type", hyforms.Options{
 		{Value: "", Display: "--- Select a Page Type ---", Selected: data.PageType == ""},
 		{Value: PageTypeTemplate, Display: "Theme Template", Selected: data.PageType == PageTypeTemplate},

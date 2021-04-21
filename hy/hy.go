@@ -72,28 +72,42 @@ func (el HTMLElement) AppendHTML(buf *strings.Builder) error {
 
 type textValue struct {
 	values []interface{}
+	unsafe bool
 }
 
 func Txt(a ...interface{}) Element {
 	return textValue{values: a}
 }
 
+func UnsafeTxt(a ...interface{}) Element {
+	return textValue{values: a, unsafe: true}
+}
+
 func (txt textValue) AppendHTML(buf *strings.Builder) error {
-	for _, value := range txt.values {
+	for i, value := range txt.values {
 		switch value := value.(type) {
 		case string:
 			if value == "" {
 				continue
 			}
-			buf.WriteString(value)
+			if txt.unsafe {
+				buf.WriteString(value)
+			} else {
+				template.HTMLEscape(buf, []byte(value))
+			}
 			if strings.TrimSpace(value) == "" {
 				continue
 			}
-			if r, _ := utf8.DecodeLastRuneInString(value); !unicode.IsSpace(r) {
+			r, _ := utf8.DecodeLastRuneInString(value)
+			if i != len(txt.values)-1 && !unicode.IsSpace(r) {
 				buf.WriteByte(' ')
 			}
 		default:
-			buf.WriteString(Stringify(value))
+			if txt.unsafe {
+				buf.WriteString(Stringify(value))
+			} else {
+				template.HTMLEscape(buf, []byte(Stringify(value)))
+			}
 		}
 	}
 	return nil
@@ -263,7 +277,8 @@ func AppendHTML(buf *strings.Builder, attrs Attributes, children []Element) erro
 		return attrs.ParseErr
 	}
 	if attrs.Tag != "" {
-		buf.WriteString(`<` + attrs.Tag)
+		buf.WriteString(`<`)
+		template.HTMLEscape(buf, []byte(attrs.Tag))
 	} else {
 		buf.WriteString(`<div`)
 	}
@@ -276,17 +291,23 @@ func AppendHTML(buf *strings.Builder, attrs Attributes, children []Element) erro
 				return err
 			}
 		}
-		buf.WriteString("</" + attrs.Tag + ">")
+		buf.WriteString(`</`)
+		template.HTMLEscape(buf, []byte(attrs.Tag))
+		buf.WriteString(`>`)
 	}
 	return nil
 }
 
 func AppendAttributes(buf *strings.Builder, attrs Attributes) {
 	if attrs.ID != "" {
-		buf.WriteString(` id="` + attrs.ID + `"`)
+		buf.WriteString(` id="`)
+		template.HTMLEscape(buf, []byte(attrs.ID))
+		buf.WriteString(`"`)
 	}
 	if attrs.Class != "" {
-		buf.WriteString(` class="` + attrs.Class + `"`)
+		buf.WriteString(` class="`)
+		template.HTMLEscape(buf, []byte(attrs.Class))
+		buf.WriteString(`"`)
 	}
 	var names []string
 	for name := range attrs.Dict {
@@ -301,11 +322,16 @@ func AppendAttributes(buf *strings.Builder, attrs Attributes) {
 		value := attrs.Dict[name]
 		switch value {
 		case Enabled:
-			buf.WriteString(` ` + name)
+			buf.WriteString(` `)
+			template.HTMLEscape(buf, []byte(name))
 		case Disabled:
 			continue
 		default:
-			buf.WriteString(` ` + name + `="` + value + `"`)
+			buf.WriteString(` `)
+			template.HTMLEscape(buf, []byte(name))
+			buf.WriteString(`="`)
+			template.HTMLEscape(buf, []byte(value))
+			buf.WriteString(`"`)
 		}
 	}
 }
