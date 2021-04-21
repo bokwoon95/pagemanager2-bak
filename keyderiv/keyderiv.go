@@ -51,6 +51,7 @@ func (p Params) String() string {
 }
 
 func (p Params) MarshalBinary() (data []byte, err error) {
+	// format: $argon2id$v=%d$m=%d,t=%d,p=%d,l=%d$<base64 salt>$
 	var buf []byte
 	// version
 	buf = append(buf, "$argon2id$v="...)
@@ -75,15 +76,19 @@ func (p Params) MarshalBinary() (data []byte, err error) {
 }
 
 func (p *Params) UnmarshalBinary(data []byte) error {
-	// parts[0] = empty string
+	// format: $argon2id$v=%d$m=%d,t=%d,p=%d,l=%d$<base64 salt>$
+	// parts[0] = <empty string>
 	// parts[1] = argon2id
 	// parts[2] = v=%d
 	// parts[3] = m=%d,t=%d,p=%d,l=%d
-	// parts[4] = base64 URL encoded salt
-	var err error
+	// parts[4] = <base64 salt>
+	// parts[5] = <empty string>
 	parts := strings.Split(string(data), "$")
+	if len(parts) < 6 {
+		return fmt.Errorf("invalid params")
+	}
 	var argon2Version int
-	_, err = fmt.Sscanf(parts[2], "v=%d", &argon2Version)
+	_, err := fmt.Sscanf(parts[2], "v=%d", &argon2Version)
 	if err != nil {
 		return err
 	}

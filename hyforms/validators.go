@@ -60,7 +60,6 @@ func And(validators ...Validator) Validator {
 		var numFailed int
 		for _, validator := range validators {
 			_, errMsg = validator(ctx2, value)
-			_, errMsg = validator(ctx2, value)
 			if errMsg != "" {
 				numFailed++
 				errMsgs = append(errMsgs, errMsg)
