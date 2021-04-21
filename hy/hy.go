@@ -4,11 +4,14 @@ package hy
 import (
 	"fmt"
 	"html/template"
+	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
-
-	"github.com/microcosm-cc/bluemonday"
+	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
 // https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
@@ -21,90 +24,103 @@ var bufpool = sync.Pool{
 	New: func() interface{} { return &strings.Builder{} },
 }
 
-const Enabled = "\x00"
-const Disabled = "\x01"
+const (
+	Enabled  = "\x00"
+	Disabled = "\x01"
+)
 
 type Element interface {
 	AppendHTML(*strings.Builder) error
 }
 
-type Attr map[string]string
-
-type Sanitizer interface {
-	Sanitize(string) string
+type HTMLElement struct {
+	attrs    Attributes
+	children []Element
 }
 
-var defaultSanitizer = func() Sanitizer {
-	p := bluemonday.UGCPolicy()
-	p.AllowStyling()
-	p.AllowDataAttributes()
-	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/form#attributes
-	p.AllowElements("form")
-	p.AllowAttrs("accept-charset", "autocomplete", "name", "rel", "action", "enctype", "method", "novalidate", "target").OnElements("form")
-	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#attributes
-	p.AllowElements("input")
-	p.AllowAttrs(
-		"accept", "alt", "autocomplete", "autofocus", "capture", "checked",
-		"dirname", "disabled", "form", "formaction", "formenctype", "formmethod",
-		"formnovalidate", "formtarget", "height", "list", "max", "maxlength", "min",
-		"minlength", "multiple", "name", "pattern", "placeholder", "readonly",
-		"required", "size", "src", "step", "type", "value", "width",
-	).OnElements("input")
-	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/button#attributes
-	p.AllowElements("button")
-	p.AllowAttrs(
-		"autofocus", "disabled", "form", "formaction", "formenctype",
-		"formmethod", "formnovalidate", "formtarget", "name", "type", "value",
-	).OnElements("button")
-	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/label#attributes
-	p.AllowElements("label")
-	p.AllowAttrs("for").OnElements("label")
-	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/select#attributes
-	p.AllowElements("select")
-	p.AllowAttrs("autocomplete", "autofocus", "disabled", "form", "multiple", "name", "required", "size").OnElements("select")
-	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/option#attributes
-	p.AllowElements("option")
-	p.AllowAttrs("disabled", "label", "selected", "value").OnElements("option")
-	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/optgroup#attributes
-	p.AllowElements("optgroup")
-	p.AllowAttrs("label", "disabled").OnElements("optgroup")
-	// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/inputmode
-	p.AllowAttrs("inputmode").Globally()
-	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link#attributes
-	p.AllowElements("link")
-	p.AllowAttrs(
-		"as", "crossorigin", "disabled", "href", "hreflang", "imagesizes",
-		"imagesrcset", "media", "rel", "sizes", "title", "type",
-	).OnElements("link")
-	p.AllowStandardURLs()
-	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attributes
-	p.AllowElements("script")
-	p.AllowAttrs("async", "crossorigin", "defer", "integrity", "nomodule", "nonce", "referrerpolicy", "src", "type").OnElements("script")
-	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/pre#attributes
-	p.AllowElements("pre")
-	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/a#attributes
-	p.AllowElements("a")
-	p.AllowAttrs("href", "hreflang", "ping", "rel", "target", "type").OnElements("a")
-	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/fieldset#attributes
-	p.AllowElements("fieldset", "legend")
-	p.AllowAttrs("disabled", "form", "name").OnElements("fieldset")
-	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/textarea#attributes
-	p.AllowElements("textarea")
-	p.AllowAttrs(
-		"autocomplete", "autofocus", "cols", "disabled", "form", "maxlength", "name",
-		"placeholder", "readonly", "required", "rows", "spellcheck", "wrap",
-	).OnElements("textarea")
+func H(selector string, attributes map[string]string, children ...Element) HTMLElement {
+	return HTMLElement{
+		attrs:    ParseAttributes(selector, attributes),
+		children: children,
+	}
+}
 
-	p.AllowElements("svg")
+func (el *HTMLElement) Set(selector string, attributes map[string]string, children ...Element) {
+	el.attrs = ParseAttributes(selector, attributes)
+	el.children = children
+}
 
-	p.AllowImages()
-	p.AllowLists()
-	p.AllowTables()
+func (el *HTMLElement) ID() string {
+	return el.attrs.ID
+}
 
-	// settings which bluemonday loves to turn back on, leave it for the last
-	p.RequireNoFollowOnLinks(false)
-	return p
-}()
+func (el *HTMLElement) Append(selector string, attributes map[string]string, children ...Element) {
+	el.children = append(el.children, H(selector, attributes, children...))
+}
+
+func (el *HTMLElement) AppendElements(elements ...Element) {
+	el.children = append(el.children, elements...)
+}
+
+func (el HTMLElement) AppendHTML(buf *strings.Builder) error {
+	err := AppendHTML(buf, el.attrs, el.children)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type textValue struct {
+	values []interface{}
+}
+
+func Txt(a ...interface{}) Element {
+	return textValue{values: a}
+}
+
+func (txt textValue) AppendHTML(buf *strings.Builder) error {
+	for _, value := range txt.values {
+		switch value := value.(type) {
+		case string:
+			if value == "" {
+				continue
+			}
+			buf.WriteString(value)
+			if strings.TrimSpace(value) == "" {
+				continue
+			}
+			if r, _ := utf8.DecodeLastRuneInString(value); !unicode.IsSpace(r) {
+				buf.WriteByte(' ')
+			}
+		default:
+			buf.WriteString(Stringify(value))
+		}
+	}
+	return nil
+}
+
+type Elements []Element
+
+func (l *Elements) Append(selector string, attributes map[string]string, children ...Element) {
+	*l = append(*l, H(selector, attributes, children...))
+}
+
+func (l *Elements) AppendElements(children ...Element) {
+	*l = append(*l, children...)
+}
+
+func (l Elements) AppendHTML(buf *strings.Builder) error {
+	var err error
+	for _, el := range l {
+		err = el.AppendHTML(buf)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type Attr map[string]string
 
 type Attributes struct {
 	ParseErr error
@@ -305,4 +321,61 @@ func Marshal(s Sanitizer, el Element) (template.HTML, error) {
 	}
 	output := s.Sanitize(buf.String())
 	return template.HTML(output), nil
+}
+
+// adapted from database/sql:asString, text/template:printableValue,printValue
+func Stringify(v interface{}) string {
+	switch v := v.(type) {
+	case fmt.Stringer:
+		return v.String()
+	case string:
+		return v
+	case []byte:
+		return string(v)
+	case time.Time:
+		return v.Format(time.RFC3339Nano)
+	case int:
+		return strconv.FormatInt(int64(v), 10)
+	case int8:
+		return strconv.FormatInt(int64(v), 10)
+	case int16:
+		return strconv.FormatInt(int64(v), 10)
+	case int32:
+		return strconv.FormatInt(int64(v), 10)
+	case int64:
+		return strconv.FormatInt(v, 10)
+	case uint:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint8:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint16:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint32:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint64:
+		return strconv.FormatUint(v, 10)
+	case float32:
+		return strconv.FormatFloat(float64(v), 'g', -1, 64)
+	case float64:
+		return strconv.FormatFloat(v, 'g', -1, 64)
+	case bool:
+		return strconv.FormatBool(v)
+	}
+	rv := reflect.ValueOf(v)
+	for {
+		if rv.Kind() != reflect.Ptr && rv.Kind() != reflect.Interface {
+			break
+		}
+		rv = rv.Elem()
+	}
+	if !rv.IsValid() {
+		return "<no value>"
+	}
+	if rv.Kind() == reflect.Chan {
+		return "<channel>"
+	}
+	if rv.Kind() == reflect.Func {
+		return "<function>"
+	}
+	return fmt.Sprint(v)
 }
