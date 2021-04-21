@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   {{ template "head" . }}
-  <title>Superadmin Dashboard</title>
+  <title>Create Page</title>
 </head>
 <body class="{{ template `bodyclass` }}">
   {{ template "navbar" . }}
@@ -10,5 +10,6 @@
     Create a page
     {{ .Form }}
   </div>
+  {{ .JS }}
 </body>
 </html>

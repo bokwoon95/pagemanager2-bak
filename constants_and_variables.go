@@ -7,8 +7,8 @@ import (
 // There's always a lighthouse. There's always a man. There's always a city.
 
 const (
-	URLLogin           = "/pm-login"
 	URLLogout          = "/pm-logout"
+	URLLogin           = "/pm-login"
 	URLSuperadminLogin = "/pm-superadmin-login"
 	URLDashboard       = "/pm-dashboard"
 	URLViewPage        = "/pm-view-page"   // GET url=/url
@@ -20,6 +20,8 @@ const (
 	// details filled in, with a message saying "this page is deleted" together
 	// with an option to undo the delete. Once you navigate away from that
 	// page, the changes will be gone forever.
+	URLConsole   = "/pm-console"
+	URLAnalytics = "/pm-analytics"
 )
 
 var (

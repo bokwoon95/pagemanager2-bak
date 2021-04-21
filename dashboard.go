@@ -84,7 +84,7 @@ func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 				)
 			case PageTypeContent:
 				div.Append("div", nil,
-					hy.Txt("Content: &lt;some content&gt;"),
+					hy.Txt("Content: <some content>"),
 					hy.H("div", nil, hy.H("a", hy.Attr{"href": URLEditPage + "?url=" + page.URL}, hy.Txt("edit"))),
 				)
 			case PageTypeTemplate:

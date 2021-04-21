@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -471,4 +472,26 @@ func (pm *PageManager) testEncrypt(w http.ResponseWriter, r *http.Request) {
 	}
 	io.WriteString(w, "publicBox msg: "+string(b)+"\n")
 	io.WriteString(w, "success\n")
+}
+
+func appendCSP(w http.ResponseWriter, policy, value string) error {
+	const key = "Content-Security-Policy"
+	CSP := w.Header().Get(key)
+	if CSP == "" {
+		w.Header().Set(key, policy+" "+value)
+		return nil
+	}
+	CSP = strings.ReplaceAll(CSP, "\n", " ") // newlines screw up the regex matching, remove them
+	re, err := regexp.Compile(`(.*` + policy + `[^;]*)(;|$)(.*)`)
+	if err != nil {
+		return erro.Wrap(err)
+	}
+	matches := re.FindStringSubmatch(CSP)
+	if len(matches) == 0 {
+		w.Header().Set(key, CSP+"; "+policy+" "+value)
+		return nil
+	}
+	newCSP := matches[1] + " " + value + matches[2] + matches[3]
+	w.Header().Set("Content-Security-Policy", newCSP)
+	return nil
 }

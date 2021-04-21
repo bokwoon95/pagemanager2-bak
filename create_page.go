@@ -17,19 +17,28 @@ type createPageData struct {
 }
 
 func (data *createPageData) Form(form *hyforms.Form) {
+	const (
+		TemplateGroupID = "template-group"
+		PluginGroupID   = "plugin-group"
+		ContentGroupID  = "content-group"
+		RedirectGroupID = "redirect-group"
+		DisabledGroupID = "disabled-group"
+	)
 	var urlValue string
 	if hyforms.Validate(data.URL, hyforms.IsRelativeURL) == nil {
 		urlValue = data.URL
 	}
 	url := form.Text("pm-url", urlValue).Set("#pm-url", nil)
+	if data.PageType == "" {
+		data.PageType = PageTypeTemplate
+	}
 	pageType := form.Select("pm-page-type", hyforms.Options{
-		{Value: "", Display: "--- Select a Page Type ---", Selected: data.PageType == ""},
 		{Value: PageTypeTemplate, Display: "Theme Template", Selected: data.PageType == PageTypeTemplate},
 		{Value: PageTypePlugin, Display: "Plugin Handler", Selected: data.PageType == PageTypePlugin},
 		{Value: PageTypeContent, Display: "Content", Selected: data.PageType == PageTypeContent},
 		{Value: PageTypeRedirect, Display: "Redirect", Selected: data.PageType == PageTypeRedirect},
 		{Value: PageTypeDisabled, Display: "Disabled", Selected: data.PageType == PageTypeDisabled},
-	}).Set("#pm-page-type", nil)
+	}).Set("#pm-page-type", hy.Attr{"size": "6"})
 	themePath := form.Text("pm-theme-path", data.ThemePath).Set("#pm-theme-path", nil)
 	templateName := form.Text("pm-template-name", data.TemplateName).Set("#pm-template-name", nil)
 	pluginName := form.Text("pm-plugin-name", data.PluginName).Set("#pm-plugin-name", nil)
@@ -46,33 +55,34 @@ func (data *createPageData) Form(form *hyforms.Form) {
 	if data.urlExists {
 		form.Append("div.f6.red", nil, hy.Txt("error: url", data.URL, "already exists"))
 	}
-	form.AppendElements(
+	form.Append("div", nil,
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": pageType.ID()}, hy.Txt("Page Type: "))),
 		hy.H("div", nil, pageType),
 	)
-	form.AppendElements(
+	form.Append("div[hidden]", hy.Attr{"id": TemplateGroupID},
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": themePath.ID()}, hy.Txt("Theme Path: "))),
 		hy.H("div", nil, themePath),
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": templateName.ID()}, hy.Txt("Template Name: "))),
 		hy.H("div", nil, templateName),
 	)
-	form.AppendElements(
+	form.Append("div[hidden]", hy.Attr{"id": PluginGroupID},
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": pluginName.ID()}, hy.Txt("Plugin Name: "))),
 		hy.H("div", nil, pluginName),
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": handlerName.ID()}, hy.Txt("Handler Name: "))),
 		hy.H("div", nil, handlerName),
 	)
-	form.AppendElements(
+	form.Append("div[hidden]", hy.Attr{"id": ContentGroupID},
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": content.ID()}, hy.Txt("Content: "))),
 		hy.H("div", nil, content),
 	)
-	form.AppendElements(
+	form.Append("div[hidden]", hy.Attr{"id": RedirectGroupID},
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": redirectURL.ID()}, hy.Txt("Redirect URL: "))),
 		hy.H("div", nil, redirectURL),
 	)
-	form.AppendElements(
+	form.Append("div[hidden]", hy.Attr{"id": DisabledGroupID},
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": disabled.ID()}, hy.Txt("Disabled: "), disabled)),
 	)
+	form.Append("div.mt3", nil, hy.H("button.pointer.pa2.bg-white", hy.Attr{"type": "submit"}, hy.Txt("Create Page")))
 
 	form.Unmarshal(func() {
 		data.URL = url.Value()
@@ -90,6 +100,7 @@ func (data *createPageData) Form(form *hyforms.Form) {
 func (pm *PageManager) createPage(w http.ResponseWriter, r *http.Request) {
 	type templateData struct {
 		Form template.HTML
+		JS   template.HTML
 	}
 	data := &createPageData{}
 	r.ParseForm()
@@ -113,6 +124,11 @@ func (pm *PageManager) createPage(w http.ResponseWriter, r *http.Request) {
 			data.urlExists, _ = sq.Exists(pm.dataDB, sq.SQLite.From(PAGES).Where(PAGES.URL.EqString(data.URL)))
 		}
 		tdata.Form, err = hyforms.MarshalForm(nil, w, r, data.Form)
+		if err != nil {
+			pm.InternalServerError(w, r, erro.Wrap(err))
+			return
+		}
+		tdata.JS, err = hy.Marshal(hy.NewSanitizer("script"), InlinedJS(w, pagemanagerFS, []string{"create_page.js"}))
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return

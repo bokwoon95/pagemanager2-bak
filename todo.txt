@@ -1,0 +1,13 @@
+/pm-login login.html
+/pm-superadmin-login superadmin_login.html
+/pm-dashboard dashboard.html
+/pm-view-page view_page.html
+/pm-create-page create_page.html
+/pm-edit-page edit_page.html
+/pm-delete-page delete_page.html
+/pm-console console.html
+/pm-analytics analytics.html
+
+instead of making .Form, etc fields on the data struct, make them methods. 
+So data structs must have access to the underlying http.ResponseWriter, *http.Request (both must be json:"-" so that pm-json can work)
+calling {{ .Form }} will call hyforms.MarshalForm, etc

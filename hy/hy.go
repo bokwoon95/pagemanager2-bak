@@ -16,6 +16,11 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 )
 
+const (
+	Enabled  = "\x00"
+	Disabled = "\x01"
+)
+
 type Element interface{ AppendHTML(*strings.Builder) error }
 
 type Sanitizer interface{ Sanitize(string) string }
@@ -26,14 +31,9 @@ var singletonElements = map[string]struct{}{
 	"LINK": {}, "META": {}, "PARAM": {}, "SOURCE": {}, "TRACK": {}, "WBR": {},
 }
 
-const (
-	Enabled  = "\x00"
-	Disabled = "\x01"
-)
-
 var bufpool = sync.Pool{New: func() interface{} { return &strings.Builder{} }}
 
-var defaultSanitizer = configDefaultSanitizer(bluemonday.UGCPolicy())
+var defaultSanitizer = defaultSanitizerConfig(bluemonday.UGCPolicy())
 
 // attributesMap is the list of attributes that we allow for each tag.
 // Attributes were referenced from MDN docs, so should be comprehensive.
@@ -456,7 +456,7 @@ func AttributesMap() map[string][]string {
 	return m
 }
 
-func configDefaultSanitizer(p *bluemonday.Policy) *bluemonday.Policy {
+func defaultSanitizerConfig(p *bluemonday.Policy) *bluemonday.Policy {
 	defaultSanitizerTags := []string{
 		"form", "input", "button", "label", "select", "option", "optgroup", "pre", "a", "fieldset", "legend", "textarea",
 	}
@@ -464,6 +464,7 @@ func configDefaultSanitizer(p *bluemonday.Policy) *bluemonday.Policy {
 	p.AllowImages()
 	p.AllowLists()
 	p.AllowTables()
+	p.AllowAttrs("inputmode", "hidden").Globally()
 	defer p.RequireNoFollowOnLinks(false) // deferred til the last because bluemonday looooves to turn it back on
 	for _, tag := range defaultSanitizerTags {
 		p.AllowAttrs(attributesMap[tag]...).OnElements(tag)
@@ -471,10 +472,10 @@ func configDefaultSanitizer(p *bluemonday.Policy) *bluemonday.Policy {
 	return p
 }
 
-func Allow(tags ...string) Sanitizer {
+func NewSanitizer(allowedTags ...string) Sanitizer {
 	p := bluemonday.UGCPolicy()
-	configDefaultSanitizer(p)
-	for _, tag := range tags {
+	defaultSanitizerConfig(p)
+	for _, tag := range allowedTags {
 		p.AllowAttrs(attributesMap[tag]...).OnElements(tag)
 	}
 	return p

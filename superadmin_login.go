@@ -29,7 +29,7 @@ func (d *superadminLoginData) LoginForm(form *hyforms.Form) {
 		form.Append("div.red", nil, hy.Txt(errMsg))
 	}
 	form.AppendElements(
-		hy.H("div.mt3.mb1", nil, hy.H("label.pointer.i", hy.Attr{"for": loginID.ID()}, hy.Txt("Email or Username: "))),
+		hy.H("div.mt3.mb1", nil, hy.H("label.pointer.i", hy.Attr{"for": loginID.ID()}, hy.Txt("Superadmin Login: "))),
 		hy.H("div", nil, loginID),
 	)
 	form.AppendElements(
