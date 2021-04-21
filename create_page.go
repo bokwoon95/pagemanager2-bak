@@ -21,22 +21,22 @@ func (data *createPageData) Form(form *hyforms.Form) {
 	if hyforms.Validate(data.URL, hyforms.IsRelativeURL) == nil {
 		urlValue = data.URL
 	}
-	url := form.Text("url", urlValue)
-	pageType := form.Select("page-type", hyforms.Options{
+	url := form.Text("pm-url", urlValue).Set("#pm-url", nil)
+	pageType := form.Select("pm-page-type", hyforms.Options{
 		{Value: "", Display: "--- Select a Page Type ---", Selected: data.PageType == ""},
 		{Value: PageTypeTemplate, Display: "Theme Template", Selected: data.PageType == PageTypeTemplate},
 		{Value: PageTypePlugin, Display: "Plugin Handler", Selected: data.PageType == PageTypePlugin},
 		{Value: PageTypeContent, Display: "Content", Selected: data.PageType == PageTypeContent},
 		{Value: PageTypeRedirect, Display: "Redirect", Selected: data.PageType == PageTypeRedirect},
 		{Value: PageTypeDisabled, Display: "Disabled", Selected: data.PageType == PageTypeDisabled},
-	})
-	themePath := form.Text("theme-path", data.ThemePath)
-	templateName := form.Text("template-name", data.TemplateName)
-	pluginName := form.Text("plugin-name", data.PluginName)
-	handlerName := form.Text("handler-name", data.HandlerName)
-	content := form.Textarea("content", data.Content)
-	redirectURL := form.Text("redirect-url", data.RedirectURL)
-	disabled := form.Checkbox("disabled", "", data.Disabled).Set(".pointer.dib", nil)
+	}).Set("#pm-page-type", nil)
+	themePath := form.Text("pm-theme-path", data.ThemePath).Set("#pm-theme-path", nil)
+	templateName := form.Text("pm-template-name", data.TemplateName).Set("#pm-template-name", nil)
+	pluginName := form.Text("pm-plugin-name", data.PluginName).Set("#pm-plugin-name", nil)
+	handlerName := form.Text("pm-handler-name", data.HandlerName).Set("#pm-handler-name", nil)
+	content := form.Textarea("pm-content", data.Content).Set("#pm-content", nil)
+	redirectURL := form.Text("pm-redirect-url", data.RedirectURL).Set("#pm-redirect-url", nil)
+	disabled := form.Checkbox("pm-disabled", "", data.Disabled).Set("#pm-disabled.pointer.dib", nil)
 
 	form.Set("", hy.Attr{"method": "POST"})
 	form.AppendElements(

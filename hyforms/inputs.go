@@ -174,11 +174,7 @@ func (i *ToggledInput) Checked() bool {
 	if i.form.mode != FormModeUnmarshal {
 		return false
 	}
-	values, ok := i.form.request.Form[i.name]
-	if !ok || len(values) == 0 {
-		return false
-	}
-	for _, v := range values {
+	for _, v := range i.form.request.Form[i.name] {
 		if i.value == "" && v == "on" {
 			return true
 		}

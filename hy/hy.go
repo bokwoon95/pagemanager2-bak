@@ -12,7 +12,13 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/microcosm-cc/bluemonday"
 )
+
+type Element interface{ AppendHTML(*strings.Builder) error }
+
+type Sanitizer interface{ Sanitize(string) string }
 
 // https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
 var singletonElements = map[string]struct{}{
@@ -20,17 +26,46 @@ var singletonElements = map[string]struct{}{
 	"LINK": {}, "META": {}, "PARAM": {}, "SOURCE": {}, "TRACK": {}, "WBR": {},
 }
 
-var bufpool = sync.Pool{
-	New: func() interface{} { return &strings.Builder{} },
-}
-
 const (
 	Enabled  = "\x00"
 	Disabled = "\x01"
 )
 
-type Element interface {
-	AppendHTML(*strings.Builder) error
+var bufpool = sync.Pool{New: func() interface{} { return &strings.Builder{} }}
+
+var defaultSanitizer = configDefaultSanitizer(bluemonday.UGCPolicy())
+
+// attributesMap is the list of attributes that we allow for each tag.
+// Attributes were referenced from MDN docs, so should be comprehensive.
+var attributesMap = map[string][]string{
+	"form": {"accept-charset", "autocomplete", "name", "rel", "action", "enctype", "method", "novalidate", "target"},
+	"input": {
+		"accept", "alt", "autocomplete", "autofocus", "capture", "checked", "dirname", "disabled", "form",
+		"formaction", "formenctype", "formmethod", "formnovalidate", "formtarget", "height", "list", "max",
+		"maxlength", "min", "minlength", "multiple", "name", "pattern", "placeholder", "readonly", "required",
+		"size", "src", "step", "type", "value", "width",
+	},
+	"button": {
+		"autofocus", "disabled", "form", "formaction", "formenctype",
+		"formmethod", "formnovalidate", "formtarget", "name", "type", "value",
+	},
+	"label":    {"for"},
+	"select":   {"autocomplete", "autofocus", "disabled", "form", "multiple", "name", "required", "size"},
+	"option":   {"disabled", "label", "selected", "value"},
+	"optgroup": {"label", "disabled"},
+	"link": {
+		"as", "crossorigin", "disabled", "href", "hreflang", "imagesizes", "imagesrcset", "media", "rel",
+		"sizes", "title", "type",
+	},
+	"script":   {"async", "crossorigin", "defer", "integrity", "nomodule", "nonce", "referrerpolicy", "src", "type"},
+	"pre":      {},
+	"a":        {"href", "hreflang", "ping", "rel", "target", "type"},
+	"fieldset": {"disabled", "form", "name"},
+	"legend":   {},
+	"textarea": {
+		"autocomplete", "autofocus", "cols", "disabled", "form", "maxlength", "name",
+		"placeholder", "readonly", "required", "rows", "spellcheck", "wrap",
+	},
 }
 
 type HTMLElement struct {
@@ -319,6 +354,9 @@ func AppendAttributes(buf *strings.Builder, attrs Attributes) {
 	}
 	sort.Strings(names)
 	for _, name := range names {
+		if name == "" {
+			continue
+		}
 		value := attrs.Dict[name]
 		switch value {
 		case Enabled:
@@ -408,4 +446,36 @@ func Stringify(v interface{}) string {
 		return "<function>"
 	}
 	return fmt.Sprint(v)
+}
+
+func AttributesMap() map[string][]string {
+	m := make(map[string][]string)
+	for k, v := range attributesMap {
+		m[k] = v
+	}
+	return m
+}
+
+func configDefaultSanitizer(p *bluemonday.Policy) *bluemonday.Policy {
+	defaultSanitizerTags := []string{
+		"form", "input", "button", "label", "select", "option", "optgroup", "pre", "a", "fieldset", "legend", "textarea",
+	}
+	p.AllowStyling()
+	p.AllowImages()
+	p.AllowLists()
+	p.AllowTables()
+	defer p.RequireNoFollowOnLinks(false) // deferred til the last because bluemonday looooves to turn it back on
+	for _, tag := range defaultSanitizerTags {
+		p.AllowAttrs(attributesMap[tag]...).OnElements(tag)
+	}
+	return p
+}
+
+func Allow(tags ...string) Sanitizer {
+	p := bluemonday.UGCPolicy()
+	configDefaultSanitizer(p)
+	for _, tag := range tags {
+		p.AllowAttrs(attributesMap[tag]...).OnElements(tag)
+	}
+	return p
 }

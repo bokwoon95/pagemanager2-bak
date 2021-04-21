@@ -90,4 +90,7 @@ func Test_Txt(t *testing.T) {
 	html, err = Marshal(nil, H("div", Attr{"class": `value" id="value`, "id": "hey"}, Txt(55)))
 	is.NoErr(err)
 	fmt.Println(html)
+	html, err = Marshal(nil, H("div", Attr{"class": `value`, "id": "hey"}, Txt(55)))
+	is.NoErr(err)
+	fmt.Println(html)
 }
