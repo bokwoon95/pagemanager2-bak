@@ -12,11 +12,19 @@ import (
 )
 
 type superadminLoginData struct {
+	w        http.ResponseWriter `json:"-"`
+	r        *http.Request       `json:"-"`
+	Title    string
+	Header   template.HTML
 	LoginID  string
 	Password string
 }
 
-func (d *superadminLoginData) LoginForm(form *hyforms.Form) {
+func (d *superadminLoginData) Form() (template.HTML, error) {
+	return hyforms.MarshalForm(nil, d.w, d.r, d.loginForm)
+}
+
+func (d *superadminLoginData) loginForm(form *hyforms.Form) {
 	loginID := form.
 		Text("pm-login-id", d.LoginID).
 		Set("#pm-login-id.bg-near-white.pa2.w-100", hy.Attr{})
@@ -66,7 +74,7 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 			Title:  "PageManager Superadmin Login",
 			Header: "PageManager Superadmin Login",
 		}
-		tdata.Form, err = hyforms.MarshalForm(nil, w, r, data.LoginForm)
+		tdata.Form, err = hyforms.MarshalForm(nil, w, r, data.loginForm)
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
@@ -77,7 +85,7 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "POST":
-		errMsgs, ok := hyforms.UnmarshalForm(w, r, data.LoginForm)
+		errMsgs, ok := hyforms.UnmarshalForm(w, r, data.loginForm)
 		if !ok {
 			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
 			return

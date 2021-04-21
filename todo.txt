@@ -8,6 +8,6 @@
 /pm-console console.html
 /pm-analytics analytics.html
 
-instead of making .Form, etc fields on the data struct, make them methods. 
+instead of making .Form, etc fields on the data struct, make them methods.
 So data structs must have access to the underlying http.ResponseWriter, *http.Request (both must be json:"-" so that pm-json can work)
 calling {{ .Form }} will call hyforms.MarshalForm, etc
