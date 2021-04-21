@@ -18,26 +18,23 @@ func Test_ParseAttributes(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		selector := "div"
 		assertOK(t, selector, map[string]string{}, Attributes{
-			Selector: selector,
-			Tag:      "div",
-			Dict:     map[string]string{},
+			Tag:  "div",
+			Dict: map[string]string{},
 		})
 	})
 	t.Run("tag only", func(t *testing.T) {
 		selector := "div"
 		assertOK(t, selector, map[string]string{}, Attributes{
-			Selector: selector,
-			Tag:      "div",
-			Dict:     map[string]string{},
+			Tag:  "div",
+			Dict: map[string]string{},
 		})
 	})
 	t.Run("selector tags, id, classes and attributes", func(t *testing.T) {
 		selector := "p#id1.class1.class2.class3#id2[attr1=val1][attr2=val2][attr3=val3][attr4]"
 		assertOK(t, selector, map[string]string{}, Attributes{
-			Selector: selector,
-			Tag:      "p",
-			ID:       "id2",
-			Class:    "class1 class2 class3",
+			Tag:   "p",
+			ID:    "id2",
+			Class: "class1 class2 class3",
 			Dict: map[string]string{
 				"attr1": "val1",
 				"attr2": "val2",
@@ -57,10 +54,9 @@ func Test_ParseAttributes(t *testing.T) {
 			"attr4": Disabled,
 		}
 		assertOK(t, selector, attributes, Attributes{
-			Selector: selector,
-			Tag:      "p",
-			ID:       "id3",
-			Class:    "class1 class2 class3 class4 class5 class6",
+			Tag:   "p",
+			ID:    "id3",
+			Class: "class1 class2 class3 class4 class5 class6",
 			Dict: map[string]string{
 				"attr1": "value-1",
 				"attr2": "value-2",

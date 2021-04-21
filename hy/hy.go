@@ -244,7 +244,11 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 			attrs.ID = value
 		case "class":
 			if value != "" {
-				attrs.Class += " " + value
+				if attrs.Class == "" {
+					attrs.Class = value
+				} else {
+					attrs.Class += " " + value
+				}
 			}
 		default:
 			attrs.Dict[name] = value
