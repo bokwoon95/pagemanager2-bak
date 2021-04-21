@@ -2,8 +2,22 @@ package hy
 
 import "github.com/microcosm-cc/bluemonday"
 
+var (
+	normalSanitizer = bluemonday.UGCPolicy()
+	laxSanitizer    = bluemonday.UGCPolicy()
+)
+
 type Sanitizer interface {
 	Sanitize(string) string
+}
+
+// DefaultSanitizer
+// LaxSanitizer
+
+func defaultSanitizerConfig(p *bluemonday.Policy) {
+}
+
+func laxSanitizerConfig(p *bluemonday.Policy) {
 }
 
 var defaultSanitizer = func() Sanitizer {

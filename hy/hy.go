@@ -50,10 +50,6 @@ func (el *HTMLElement) Set(selector string, attributes map[string]string, childr
 	el.children = children
 }
 
-func (el *HTMLElement) ID() string {
-	return el.attrs.ID
-}
-
 func (el *HTMLElement) Append(selector string, attributes map[string]string, children ...Element) {
 	el.children = append(el.children, H(selector, attributes, children...))
 }
@@ -61,6 +57,10 @@ func (el *HTMLElement) Append(selector string, attributes map[string]string, chi
 func (el *HTMLElement) AppendElements(elements ...Element) {
 	el.children = append(el.children, elements...)
 }
+
+func (el HTMLElement) Tag() string { return el.attrs.Tag }
+
+func (el HTMLElement) ID() string { return el.attrs.ID }
 
 func (el HTMLElement) AppendHTML(buf *strings.Builder) error {
 	err := AppendHTML(buf, el.attrs, el.children)
