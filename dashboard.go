@@ -1,7 +1,6 @@
 package pagemanager
 
 import (
-	"encoding/json"
 	"html/template"
 	"net/http"
 
@@ -88,15 +87,6 @@ func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 				return nil
 			})
 		})
-		if len(r.Form[queryparamJSON]) > 0 {
-			b, err := json.Marshal(data)
-			if err != nil {
-				pm.InternalServerError(w, r, erro.Wrap(err))
-			} else {
-				w.Write(b)
-			}
-			return
-		}
 		err = pm.tpl.Render(w, r, data, tpl.Files("dashboard.html"))
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
