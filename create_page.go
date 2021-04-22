@@ -13,11 +13,21 @@ import (
 )
 
 type createPageData struct {
-	urlExists bool
+	w         http.ResponseWriter `json:"-"`
+	r         *http.Request       `json:"-"`
+	URLExists bool
 	Page
 }
 
-func (data *createPageData) Form(form *hyforms.Form) {
+func (data *createPageData) Form() (template.HTML, error) {
+	return hyforms.MarshalForm(nil, data.w, data.r, data.formCallback)
+}
+
+func (data *createPageData) JS() (template.HTML, error) {
+	return hy.Marshal(hy.NewSanitizer("script"), InlinedJS(data.w, pagemanagerFS, []string{"create_page.js"}))
+}
+
+func (data *createPageData) formCallback(form *hyforms.Form) {
 	const (
 		TemplateGroupID = "template-group"
 		PluginGroupID   = "plugin-group"
@@ -53,7 +63,7 @@ func (data *createPageData) Form(form *hyforms.Form) {
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": url.ID()}, hy.Txt("URL: "))),
 		hy.H("div", nil, url),
 	)
-	if data.urlExists {
+	if data.URLExists {
 		form.Append("div.f6.red", nil, hy.Txt("error: url", data.URL, "already exists"))
 	}
 	form.Append("div", nil,
@@ -126,9 +136,9 @@ func (pm *PageManager) createPage(w http.ResponseWriter, r *http.Request) {
 		tdata := templateData{}
 		if data.URL != "" {
 			PAGES := tables.NEW_PAGES(r.Context(), "p")
-			data.urlExists, _ = sq.Exists(pm.dataDB, sq.SQLite.From(PAGES).Where(PAGES.URL.EqString(data.URL)))
+			data.URLExists, _ = sq.Exists(pm.dataDB, sq.SQLite.From(PAGES).Where(PAGES.URL.EqString(data.URL)))
 		}
-		tdata.Form, err = hyforms.MarshalForm(nil, w, r, data.Form)
+		tdata.Form, err = hyforms.MarshalForm(nil, w, r, data.formCallback)
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
@@ -144,7 +154,7 @@ func (pm *PageManager) createPage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "POST":
-		errMsgs, ok := hyforms.UnmarshalForm(w, r, data.Form)
+		errMsgs, ok := hyforms.UnmarshalForm(w, r, data.formCallback)
 		if !ok {
 			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
 			return
