@@ -174,7 +174,7 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 			SUPERADMIN := tables.NEW_SUPERADMIN("")
 			superadminExists, _ := sq.Exists(pm.superadminDB, sq.SQLite.From(SUPERADMIN))
 			if !superadminExists {
-				if c, _ := r.Cookie(cookieLoginRedirect); c == nil {
+				if c, _ := r.Cookie(cookieLoginRedirect); r2.Method == "GET" && c == nil {
 					r2.ParseForm()
 					redirectURL := r2.URL.Path
 					if r2.URL.RawQuery != "" {
