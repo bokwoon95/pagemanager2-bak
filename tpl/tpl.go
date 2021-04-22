@@ -202,6 +202,11 @@ func FuncMap(funcMap map[string]interface{}) RenderOption {
 		if !rdr.init {
 			rdr.redeclaredFuncMap = true
 		}
+		m := make(map[string]interface{})
+		for name, fn := range rdr.funcMap {
+			m[name] = fn
+		}
+		rdr.funcMap = m
 		for name, fn := range funcMap {
 			rdr.funcMap[name] = fn
 		}
