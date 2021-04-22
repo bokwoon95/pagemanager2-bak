@@ -3,6 +3,7 @@ package pagemanager
 import (
 	"html/template"
 	"net/http"
+	"net/url"
 
 	"github.com/bokwoon95/pagemanager/erro"
 	"github.com/bokwoon95/pagemanager/hy"
@@ -38,7 +39,7 @@ func (data *createPageData) Form(form *hyforms.Form) {
 		{Value: PageTypeContent, Display: "Content", Selected: data.PageType == PageTypeContent},
 		{Value: PageTypeRedirect, Display: "Redirect", Selected: data.PageType == PageTypeRedirect},
 		{Value: PageTypeDisabled, Display: "Disabled", Selected: data.PageType == PageTypeDisabled},
-	}).Set("#pm-page-type", hy.Attr{"size": "6"})
+	}).Set("#pm-page-type", hy.Attr{"size": "5"})
 	themePath := form.Text("pm-theme-path", data.ThemePath).Set("#pm-theme-path", nil)
 	templateName := form.Text("pm-template-name", data.TemplateName).Set("#pm-template-name", nil)
 	pluginName := form.Text("pm-plugin-name", data.PluginName).Set("#pm-plugin-name", nil)
@@ -108,16 +109,20 @@ func (pm *PageManager) createPage(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		user := pm.getUser(w, r)
+		data.URL = r.FormValue("url")
 		switch {
 		case !user.Valid:
-			_ = hyforms.SetCookieValue(w, cookieLoginRedirect, LocaleURL(r, r.URL.Path), nil)
+			q := url.Values{}
+			if data.URL != "" {
+				q.Add("url", data.URL)
+			}
+			_ = hyforms.SetCookieValue(w, cookieLoginRedirect, LocaleURL(r, querystringify(r.URL.Path, q)), nil)
 			pm.RedirectToLogin(w, r)
 			return
 		case !user.HasPagePerms(PagePermsCreate):
 			pm.Forbidden(w, r)
 			return
 		}
-		data.URL = r.FormValue("url")
 		tdata := templateData{}
 		if data.URL != "" {
 			PAGES := tables.NEW_PAGES(r.Context(), "p")

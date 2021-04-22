@@ -1,12 +1,12 @@
-/pm-login login.html
-/pm-superadmin-login superadmin_login.html
-/pm-dashboard dashboard.html
-/pm-view-page view_page.html
-/pm-create-page create_page.html
-/pm-edit-page edit_page.html
-/pm-delete-page delete_page.html
-/pm-console console.html
-/pm-analytics analytics.html
+/pm-login            | login.html            | type loginData           | pm.login
+/pm-superadmin-login | superadmin_login.html | type superadminLoginData | pm.superadminLogin
+/pm-dashboard        | dashboard.html        | type dashboardData       | pm.dashboard
+/pm-view-page        | view_page.html        | type viewPageData        | pm.viewPage
+/pm-create-page      | create_page.html      | type createPageData      | pm.createPage
+/pm-edit-page        | edit_page.html        | type editPageData        | pm.editPage
+/pm-delete-page      | delete_page.html      | type deletePageData      | pm.deletePage
+/pm-console          | console.html          | type consoleData         | pm.console
+/pm-analytics        | analytics.html        | type analyticsData       | pm.analytics
 
 instead of making .Form, etc fields on the data struct, make them methods.
 So data structs must have access to the underlying http.ResponseWriter, *http.Request (both must be json:"-" so that pm-json can work)

@@ -70,16 +70,10 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 			Redirect(w, r, URLDashboard)
 			return
 		}
-		tdata := templateData{
-			Title:  "PageManager Superadmin Login",
-			Header: "PageManager Superadmin Login",
-		}
-		tdata.Form, err = hyforms.MarshalForm(nil, w, r, data.loginForm)
-		if err != nil {
-			pm.InternalServerError(w, r, erro.Wrap(err))
-			return
-		}
-		err = pm.executeTemplates(w, tdata, pagemanagerFS, "superadmin_login.html")
+		data.w, data.r = w, r
+		data.Title = "PageManager Superadmin Login"
+		data.Header = "PageManager Superadmin Login"
+		err = pm.executeTemplates(w, data, pagemanagerFS, "superadmin_login.html")
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return

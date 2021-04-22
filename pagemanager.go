@@ -206,6 +206,7 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 	})
 }
 
+// TODO: this is the wrong layer of abstraction to handle url query params. Instead the caller of this function should encode the query params into the url itself. A helper `func querifyURL(url string, q url.Values) string` will reduce the boilerplate.
 func LocaleURL(r *http.Request, url string) string {
 	path := url
 	if url == "" {
@@ -219,6 +220,14 @@ func LocaleURL(r *http.Request, url string) string {
 		return path
 	}
 	return "/" + localeCode + path
+}
+
+func querystringify(url string, query url.Values) string {
+	qs := query.Encode()
+	if qs == "" {
+		return url
+	}
+	return url + "?" + qs
 }
 
 func LocaleCode(r *http.Request) string {
