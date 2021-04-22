@@ -26,19 +26,19 @@ type Page struct {
 	TemplateName string
 }
 
-func (page *Page) RowMapper(p tables.PM_PAGES) func(*sq.Row) error {
+func (page *Page) RowMapper(PAGES tables.PM_PAGES) func(*sq.Row) error {
 	return func(row *sq.Row) error {
-		url := row.NullString(p.URL)
+		url := row.NullString(PAGES.URL)
 		page.Valid = url.Valid
 		page.URL = url.String
-		page.PageType = row.String(p.PAGE_TYPE)
-		page.Disabled = row.Bool(p.DISABLED)
-		page.RedirectURL = row.String(p.REDIRECT_URL)
-		page.PluginName = row.String(p.PLUGIN_NAME)
-		page.HandlerName = row.String(p.HANDLER_NAME)
-		page.Content = row.String(p.CONTENT)
-		page.ThemePath = row.String(p.THEME_PATH)
-		page.TemplateName = row.String(p.TEMPLATE_NAME)
+		page.PageType = row.String(PAGES.PAGE_TYPE)
+		page.Disabled = row.Bool(PAGES.DISABLED)
+		page.RedirectURL = row.String(PAGES.REDIRECT_URL)
+		page.PluginName = row.String(PAGES.PLUGIN_NAME)
+		page.HandlerName = row.String(PAGES.HANDLER_NAME)
+		page.Content = row.String(PAGES.CONTENT)
+		page.ThemePath = row.String(PAGES.THEME_PATH)
+		page.TemplateName = row.String(PAGES.TEMPLATE_NAME)
 		return nil
 	}
 }
