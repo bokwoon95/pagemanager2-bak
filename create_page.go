@@ -3,7 +3,6 @@ package pagemanager
 import (
 	"html/template"
 	"net/http"
-	"net/url"
 
 	"github.com/bokwoon95/pagemanager/erro"
 	"github.com/bokwoon95/pagemanager/hy"
@@ -117,20 +116,15 @@ func (pm *PageManager) createPage(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		user := pm.getUser(w, r)
-		data.URL = r.FormValue("url")
 		switch {
 		case !user.Valid:
-			q := url.Values{}
-			if data.URL != "" {
-				q.Add("url", data.URL)
-			}
-			_ = hyforms.SetCookieValue(w, cookieLoginRedirect, LocaleURL(r, querystringify(r.URL.Path, q)), nil)
 			pm.RedirectToLogin(w, r)
 			return
 		case !user.HasPagePerms(PagePermsCreate):
 			pm.Forbidden(w, r)
 			return
 		}
+		data.URL = r.FormValue("url")
 		if data.URL != "" {
 			PAGES := tables.NEW_PAGES(r.Context(), "p")
 			data.URLExists, _ = sq.Exists(pm.dataDB, sq.SQLite.From(PAGES).Where(PAGES.URL.EqString(data.URL)))

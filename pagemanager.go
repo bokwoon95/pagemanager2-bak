@@ -176,7 +176,11 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 			if !superadminExists {
 				if c, _ := r.Cookie(cookieLoginRedirect); c == nil {
 					r2.ParseForm()
-					_ = hyforms.SetCookieValue(w, cookieLoginRedirect, LocaleURL(r2, querystringify(r2.URL.Path, r2.Form)), nil)
+					redirectURL := r2.URL.Path
+					if r2.URL.RawQuery != "" {
+						redirectURL += "?" + r2.URL.RawQuery
+					}
+					_ = hyforms.SetCookieValue(w, cookieLoginRedirect, LocaleURL(r2, redirectURL), nil)
 				}
 				pm.superadminSetup(w, r2)
 				return
@@ -234,14 +238,6 @@ func LocaleURL(r *http.Request, url string) string {
 	return "/" + localeCode + path
 }
 
-func querystringify(url string, query url.Values) string {
-	qs := query.Encode()
-	if qs == "" {
-		return url
-	}
-	return url + "?" + qs
-}
-
 func LocaleCode(r *http.Request) string {
 	localeCode, _ := r.Context().Value(ctxKeyLocaleCode).(string)
 	return localeCode
@@ -266,6 +262,13 @@ func Redirect(w http.ResponseWriter, r *http.Request, url string) {
 }
 
 func (pm *PageManager) RedirectToLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		redirectURL := r.URL.Path
+		if r.URL.RawQuery != "" {
+			redirectURL += "?" + r.URL.RawQuery
+		}
+		_ = hyforms.SetCookieValue(w, cookieLoginRedirect, LocaleURL(r, redirectURL), nil)
+	}
 	USERS := tables.NEW_USERS(r.Context(), "u")
 	usersExist, _ := sq.Exists(pm.dataDB, sq.SQLite.From(USERS).Where(USERS.USER_ID.NeInt(1)))
 	if usersExist {
