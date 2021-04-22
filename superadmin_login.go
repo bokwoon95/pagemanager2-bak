@@ -57,12 +57,7 @@ func (d *superadminLoginData) loginForm(form *hyforms.Form) {
 }
 
 func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
-	type templateData struct {
-		Title  string
-		Header template.HTML
-		Form   template.HTML
-	}
-	data := &superadminLoginData{}
+	data := &superadminLoginData{w: w, r: r}
 	var err error
 	switch r.Method {
 	case "GET":
@@ -71,7 +66,6 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 			Redirect(w, r, URLDashboard)
 			return
 		}
-		data.w, data.r = w, r
 		data.Title = "PageManager Superadmin Login"
 		data.Header = "PageManager Superadmin Login"
 		err = pm.tpl.Render(w, r, data, tpl.Files("superadmin_login.html"))

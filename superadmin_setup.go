@@ -18,9 +18,17 @@ import (
 )
 
 type superadminSetupData struct {
+	w               http.ResponseWriter `json:"-"`
+	r               *http.Request       `json:"-"`
+	Title           string
+	Header          template.HTML
 	LoginID         string
 	Password        string
 	ConfirmPassword string
+}
+
+func (d *superadminSetupData) Form() (template.HTML, error) {
+	return hyforms.MarshalForm(nil, d.w, d.r, d.setupForm)
 }
 
 func (d *superadminSetupData) setupForm(form *hyforms.Form) {
@@ -73,27 +81,15 @@ func (d *superadminSetupData) setupForm(form *hyforms.Form) {
 }
 
 func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
-	type templateData struct {
-		Title  string
-		Header template.HTML
-		Form   template.HTML
-	}
-	data := &superadminSetupData{}
+	data := &superadminSetupData{w: w, r: r}
 	const setupForm = "setupForm"
 	var err error
 	switch r.Method {
 	case "GET":
-		tdata := templateData{
-			Title:  "PageManager Setup",
-			Header: "PageManager Setup",
-		}
+		data.Title = "PageManager Setup"
+		data.Header = "PageManager Setup"
 		_ = hyforms.GetCookieValue(w, r, setupForm, data)
-		tdata.Form, err = hyforms.MarshalForm(nil, w, r, data.setupForm)
-		if err != nil {
-			pm.InternalServerError(w, r, erro.Wrap(err))
-			return
-		}
-		err = pm.tpl.Render(w, r, tdata, tpl.Files("superadmin_setup.html"))
+		err = pm.tpl.Render(w, r, data, tpl.Files("superadmin_setup.html"))
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
