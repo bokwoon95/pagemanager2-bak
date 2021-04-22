@@ -98,7 +98,6 @@ func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		err = pm.tpl.Render(w, r, data, tpl.Files("dashboard.html"))
-		// err = pm.executeTemplates(w, r, data, pagemanagerFS, "dashboard.html")
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return

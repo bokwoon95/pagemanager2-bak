@@ -117,6 +117,7 @@ func New() (*PageManager, error) {
 			r.ParseForm()
 			return len(r.Form[queryparamJSON]) > 0, nil
 		}),
+		tpl.AlwaysParseTemplates(true),
 	)
 	return pm, nil
 }

@@ -20,22 +20,25 @@ type Renderer struct {
 	files                []string
 	basefile             string
 	funcMap              map[string]interface{}
-	templateOption       []string
+	tmplOption           []string
 	cacheGet             func(w http.ResponseWriter, r *http.Request, files []string) (*template.Template, error)
 	cacheSet             func(w http.ResponseWriter, r *http.Request, files []string, t *template.Template) error
 	shouldJSON           func(w http.ResponseWriter, r *http.Request, data interface{}) (bool, error)
 	jsonMarshaller       func(w http.ResponseWriter, r *http.Request, data interface{}) ([]byte, error)
 	alwaysParseTemplates bool
-	rendering            bool
+	init                 bool
 	redeclaredFuncMap    bool
+	redeclaredTmplOption bool
 	redeclaredFS         bool
 }
 
 func New(fsys fs.FS, opts ...RenderOption) Renderer {
 	rdr := Renderer{fs: fsys, funcMap: make(map[string]interface{})}
+	rdr.init = true
 	for _, opt := range opts {
 		opt(&rdr)
 	}
+	rdr.init = false
 	return rdr
 }
 
@@ -44,7 +47,6 @@ func Render(w http.ResponseWriter, r *http.Request, data interface{}, opts ...Re
 }
 
 func (rdr Renderer) Render(w http.ResponseWriter, r *http.Request, data interface{}, opts ...RenderOption) error {
-	rdr.rendering = true
 	for _, opt := range opts {
 		opt(&rdr)
 	}
@@ -100,7 +102,7 @@ func (rdr Renderer) parseTemplate(w http.ResponseWriter, r *http.Request) (*temp
 	}
 	var t *template.Template
 	var err error
-	doNotCache := rdr.redeclaredFuncMap || rdr.redeclaredFS
+	doNotCache := rdr.redeclaredFuncMap || rdr.redeclaredFS || rdr.redeclaredTmplOption
 	allFiles := make([]string, len(rdr.files)+1)
 	allFiles[0] = rdr.basefile
 	copy(allFiles[1:], rdr.files)
@@ -116,8 +118,8 @@ func (rdr Renderer) parseTemplate(w http.ResponseWriter, r *http.Request) (*temp
 	}
 	var b []byte
 	t = template.New(rdr.basefile)
-	if len(rdr.templateOption) > 0 {
-		t.Option(rdr.templateOption...)
+	if len(rdr.tmplOption) > 0 {
+		t.Option(rdr.tmplOption...)
 	}
 	if len(rdr.funcMap) > 0 {
 		t.Funcs(rdr.funcMap)
@@ -158,7 +160,7 @@ func FSFiles(fsys fs.FS, files ...string) RenderOption {
 
 func FS(fsys fs.FS) RenderOption {
 	return func(rdr *Renderer) {
-		if rdr.rendering {
+		if !rdr.init {
 			rdr.redeclaredFS = true
 		}
 		rdr.fs = fsys
@@ -167,7 +169,7 @@ func FS(fsys fs.FS) RenderOption {
 
 func Files(files ...string) RenderOption {
 	return func(rdr *Renderer) {
-		if rdr.rendering {
+		if !rdr.init {
 			if len(files) == 0 {
 				return
 			}
@@ -179,9 +181,23 @@ func Files(files ...string) RenderOption {
 	}
 }
 
+func NewFiles(files ...string) RenderOption {
+	return func(rdr *Renderer) {
+		if !rdr.init {
+			if len(files) == 0 {
+				return
+			}
+			rdr.basefile = files[0]
+			rdr.files = files[1:]
+		} else {
+			rdr.files = files
+		}
+	}
+}
+
 func FuncMap(funcMap map[string]interface{}) RenderOption {
 	return func(rdr *Renderer) {
-		if rdr.rendering {
+		if !rdr.init {
 			rdr.redeclaredFuncMap = true
 		}
 		for name, fn := range funcMap {
@@ -190,8 +206,24 @@ func FuncMap(funcMap map[string]interface{}) RenderOption {
 	}
 }
 
+func NewFuncMap(funcMap map[string]interface{}) RenderOption {
+	return func(rdr *Renderer) {
+		rdr.funcMap = make(map[string]interface{})
+		FuncMap(funcMap)(rdr)
+	}
+}
+
+func Option(opt ...string) RenderOption {
+	return func(rdr *Renderer) {
+		if !rdr.init {
+			rdr.redeclaredTmplOption = true
+		}
+		rdr.tmplOption = append(rdr.tmplOption, opt...)
+	}
+}
+
 func TemplateOption(opt ...string) RenderOption {
-	return func(rdr *Renderer) { rdr.templateOption = append(rdr.templateOption, opt...) }
+	return func(rdr *Renderer) { rdr.tmplOption = append(rdr.tmplOption, opt...) }
 }
 
 func DefaultCache() RenderOption {

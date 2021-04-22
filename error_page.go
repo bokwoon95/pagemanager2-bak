@@ -10,6 +10,7 @@ import (
 	"github.com/bokwoon95/pagemanager/hy"
 	"github.com/bokwoon95/pagemanager/sq"
 	"github.com/bokwoon95/pagemanager/tables"
+	"github.com/bokwoon95/pagemanager/tpl"
 )
 
 type errorPageData struct {
@@ -34,7 +35,7 @@ func (pm *PageManager) InternalServerError(w http.ResponseWriter, r *http.Reques
 		io.WriteString(w, fmt.Errorf("%w: %s", serverErr, err).Error())
 		return
 	}
-	err = pm.executeTemplates(w, r, data, pagemanagerFS, "error_page.html")
+	err = pm.tpl.Render(w, r, data, tpl.NewFiles("error_page.html"))
 	if err != nil {
 		io.WriteString(w, fmt.Errorf("%w: %s", serverErr, err).Error())
 		return
@@ -63,7 +64,7 @@ func (pm *PageManager) Unauthorized(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, fmt.Errorf("403 Forbidden: %s", err).Error())
 		return
 	}
-	err = pm.executeTemplates(w, r, data, pagemanagerFS, "error_page.html")
+	err = pm.tpl.Render(w, r, data, tpl.NewFiles("error_page.html"))
 	if err != nil {
 		io.WriteString(w, fmt.Errorf("403 Forbidden: %s", err).Error())
 		return
@@ -81,12 +82,7 @@ func (pm *PageManager) Forbidden(w http.ResponseWriter, r *http.Request) {
 		hy.H("p", nil, hy.Txt("You are not authorized to do this action.")),
 		hy.H("p", nil, hy.H("a", hy.Attr{"href": LocaleURL(r, "/")}, hy.Txt("Go Home")), hy.Txt(".")),
 	})
-	t, err := template.ParseFS(pagemanagerFS, "error_page.html")
-	if err != nil {
-		io.WriteString(w, fmt.Errorf("401 Unauthorized: %s", err).Error())
-		return
-	}
-	err = t.Execute(w, data)
+	err = pm.tpl.Render(w, r, data, tpl.NewFiles("error_page.html"))
 	if err != nil {
 		io.WriteString(w, fmt.Errorf("401 Unauthorized: %s", err).Error())
 		return

@@ -10,6 +10,7 @@ import (
 	"github.com/bokwoon95/pagemanager/keyderiv"
 	"github.com/bokwoon95/pagemanager/sq"
 	"github.com/bokwoon95/pagemanager/tables"
+	"github.com/bokwoon95/pagemanager/tpl"
 )
 
 type loginData struct {
@@ -75,7 +76,7 @@ func (pm *PageManager) login(w http.ResponseWriter, r *http.Request) {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
-		err = pm.executeTemplates(w, r, tdata, pagemanagerFS, "login.html")
+		err = pm.tpl.Render(w, r, tdata, tpl.Files("login.html"))
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
