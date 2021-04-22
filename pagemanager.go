@@ -24,6 +24,7 @@ import (
 	"github.com/bokwoon95/pagemanager/hyforms"
 	"github.com/bokwoon95/pagemanager/sq"
 	"github.com/bokwoon95/pagemanager/tables"
+	"github.com/bokwoon95/pagemanager/tpl"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -45,6 +46,7 @@ type PageManager struct {
 	localesMutex        *sync.RWMutex
 	locales             map[string]string
 	plugins             map[string]map[string]http.Handler
+	tpl                 tpl.Renderer
 }
 
 func New() (*PageManager, error) {
@@ -108,6 +110,14 @@ func New() (*PageManager, error) {
 	if err != nil {
 		return pm, erro.Wrap(err)
 	}
+	pm.tpl = tpl.New(pagemanagerFS,
+		tpl.Files("common.html"),
+		tpl.FuncMap(pm.funcmap()),
+		tpl.ShouldJSON(func(w http.ResponseWriter, r *http.Request, data interface{}) (bool, error) {
+			r.ParseForm()
+			return len(r.Form[queryparamJSON]) > 0, nil
+		}),
+	)
 	return pm, nil
 }
 
@@ -345,7 +355,7 @@ func (pm *PageManager) serveFile(w http.ResponseWriter, r *http.Request, name st
 	http.ServeContent(w, r, name, info.ModTime(), fseeker)
 }
 
-func (pm *PageManager) executeTemplates(w http.ResponseWriter, data interface{}, fsys fs.FS, file string, files ...string) error {
+func (pm *PageManager) executeTemplates(w http.ResponseWriter, r *http.Request, data interface{}, fsys fs.FS, file string, files ...string) error {
 	b, err := fs.ReadFile(fsys, file)
 	if err != nil {
 		return erro.Wrap(err)

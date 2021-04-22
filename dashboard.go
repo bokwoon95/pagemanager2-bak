@@ -10,6 +10,7 @@ import (
 	"github.com/bokwoon95/pagemanager/hyforms"
 	"github.com/bokwoon95/pagemanager/sq"
 	"github.com/bokwoon95/pagemanager/tables"
+	"github.com/bokwoon95/pagemanager/tpl"
 )
 
 type dashboardData struct {
@@ -96,7 +97,8 @@ func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
-		err = pm.executeTemplates(w, data, pagemanagerFS, "dashboard.html")
+		err = pm.tpl.Render(w, r, data, tpl.Files("dashboard.html"))
+		// err = pm.executeTemplates(w, r, data, pagemanagerFS, "dashboard.html")
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return

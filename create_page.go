@@ -132,7 +132,7 @@ func (pm *PageManager) createPage(w http.ResponseWriter, r *http.Request) {
 			PAGES := tables.NEW_PAGES(r.Context(), "p")
 			data.URLExists, _ = sq.Exists(pm.dataDB, sq.SQLite.From(PAGES).Where(PAGES.URL.EqString(data.URL)))
 		}
-		err := pm.executeTemplates(w, data, pagemanagerFS, "create_page.html")
+		err := pm.executeTemplates(w, r, data, pagemanagerFS, "create_page.html")
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return

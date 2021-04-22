@@ -24,8 +24,9 @@ func fmtCallerInfo(pc uintptr, file string, line int, _ bool) (filename string, 
 }
 
 func unwrapErr(err error) (errMsgs []string) {
+	const maxiterations = 1000
 	var prevMsg string
-	for {
+	for i := 0; i < maxiterations; i++ {
 		if err.Error() != prevMsg {
 			errMsgs = append(errMsgs, err.Error())
 		}
@@ -36,13 +37,12 @@ func unwrapErr(err error) (errMsgs []string) {
 		}
 	}
 	var prevLen, currLen int
-	for i := len(errMsgs) - 1; i >= 0; i-- {
+	last := len(errMsgs) - 1
+	for i := last; i >= 0; i-- {
 		currLen = len(errMsgs[i])
-		if prevLen == 0 {
-			prevLen = currLen
-			continue
+		if i < last {
+			errMsgs[i] = errMsgs[i][:currLen-prevLen]
 		}
-		errMsgs[i] = errMsgs[i][:currLen-prevLen]
 		prevLen = currLen
 	}
 	return errMsgs

@@ -73,7 +73,7 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 		data.w, data.r = w, r
 		data.Title = "PageManager Superadmin Login"
 		data.Header = "PageManager Superadmin Login"
-		err = pm.executeTemplates(w, data, pagemanagerFS, "superadmin_login.html")
+		err = pm.executeTemplates(w, r, data, pagemanagerFS, "superadmin_login.html")
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return

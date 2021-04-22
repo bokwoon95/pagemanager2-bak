@@ -92,7 +92,7 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
-		err = pm.executeTemplates(w, tdata, pagemanagerFS, "superadmin_setup.html")
+		err = pm.executeTemplates(w, r, tdata, pagemanagerFS, "superadmin_setup.html")
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return

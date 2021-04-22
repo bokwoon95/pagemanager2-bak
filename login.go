@@ -75,7 +75,7 @@ func (pm *PageManager) login(w http.ResponseWriter, r *http.Request) {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
-		err = pm.executeTemplates(w, tdata, pagemanagerFS, "login.html")
+		err = pm.executeTemplates(w, r, tdata, pagemanagerFS, "login.html")
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
