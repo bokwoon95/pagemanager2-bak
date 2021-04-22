@@ -23,27 +23,24 @@ func (d *dashboardData) PagesList() (template.HTML, error) {
 	els.Append("div.mv2", nil, hy.H("a", hy.Attr{"href": URLCreatePage}, hy.Txt("create")))
 	for _, page := range d.Pages {
 		div := hy.H("div.mv2", nil)
-		div.Append("div", nil, hy.Txt("URL: "), hy.Txt(page.URL))
+		div.Append("div", nil, hy.Txt("URL: ", page.URL))
 		if page.URL == "" {
 			continue
 		}
 		switch page.PageType {
 		case PageTypeDisabled:
 			div.Append("div", nil,
-				hy.Txt("Disabled: "),
-				hy.Txt(page.Disabled),
+				hy.Txt("Disabled:", page.Disabled),
 				hy.H("a", hy.Attr{"href": URLEditPage + "?url=" + page.URL}, hy.Txt("edit")),
 			)
 		case PageTypeRedirect:
 			div.Append("div", nil,
-				hy.Txt("RedirectURL: "),
-				hy.Txt(page.RedirectURL),
+				hy.Txt("RedirectURL:", page.RedirectURL),
 				hy.H("div", nil, hy.H("a", hy.Attr{"href": URLEditPage + "?url=" + page.URL}, hy.Txt("edit"))),
 			)
 		case PageTypePlugin:
 			div.Append("div", nil,
-				hy.Txt("HandlerURL: "),
-				hy.Txt(page.HandlerName),
+				hy.Txt("HandlerURL:", page.HandlerName),
 				hy.H("div", nil, hy.H("a", hy.Attr{"href": URLEditPage + "?url=" + page.URL}, hy.Txt("edit"))),
 			)
 		case PageTypeContent:
@@ -53,10 +50,7 @@ func (d *dashboardData) PagesList() (template.HTML, error) {
 			)
 		case PageTypeTemplate:
 			div.Append("div", nil,
-				hy.Txt("ThemePath: "),
-				hy.Txt(page.ThemePath),
-				hy.Txt(", Template: "),
-				hy.Txt(page.TemplateName),
+				hy.Txt("ThemePath:", page.ThemePath+", Template:", page.TemplateName),
 				hy.H("div", nil, hy.H("a", hy.Attr{"href": URLEditPage + "?url=" + page.URL}, hy.Txt("edit"))),
 			)
 		default:
