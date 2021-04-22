@@ -66,6 +66,8 @@ func (data *createPageData) formCallback(form *hyforms.Form) {
 	)
 	if data.URLExists {
 		form.Append("div.f6.red", nil, hy.Txt("error: url", data.URL, "already exists"))
+	} else if data.URL == "/" {
+		form.Append("div.f6.gray", nil, hy.Txt(`Note: "/" refers to your home page.`))
 	}
 	form.Append("div", nil,
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": pageType.ID()}, hy.Txt("Page Type: "))),

@@ -1,12 +1,10 @@
 package pagemanager
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
-	"html/template"
 	"io"
 	"io/fs"
 	"log"
@@ -171,21 +169,23 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 		if err == nil {
 			r2 = r2.WithContext(context.WithValue(r2.Context(), ctxKeyUser, user))
 		}
-		switch {
-		case !*flagNoSetup:
+		if _, ok := superadminURLs[r2.URL.Path]; ok && !*flagNoSetup {
 			SUPERADMIN := tables.NEW_SUPERADMIN("")
 			superadminExists, _ := sq.Exists(pm.superadminDB, sq.SQLite.From(SUPERADMIN))
-			if superadminExists {
-				if !pm.boxesInitialized() && *flagPass != "" {
-					err = pm.initializeBoxes([]byte(*flagPass))
-					if err != nil {
-						log.Printf("Incorrect password passed to -pm-pass")
-					}
+			if !superadminExists {
+				if c, _ := r.Cookie(cookieLoginRedirect); c == nil {
+					r2.ParseForm()
+					_ = hyforms.SetCookieValue(w, cookieLoginRedirect, LocaleURL(r2, querystringify(r2.URL.Path, r2.Form)), nil)
 				}
-				break
+				pm.superadminSetup(w, r2)
+				return
 			}
-			pm.superadminSetup(w, r2)
-			return
+		}
+		if !pm.boxesInitialized() && *flagPass != "" {
+			err = pm.initializeBoxes([]byte(*flagPass))
+			if err != nil {
+				log.Printf("Incorrect password passed to -pm-pass")
+			}
 		}
 		switch page.PageType {
 		case PageTypeTemplate:
@@ -354,39 +354,6 @@ func (pm *PageManager) serveFile(w http.ResponseWriter, r *http.Request, name st
 		return
 	}
 	http.ServeContent(w, r, name, info.ModTime(), fseeker)
-}
-
-func (pm *PageManager) executeTemplates(w http.ResponseWriter, r *http.Request, data interface{}, fsys fs.FS, file string, files ...string) error {
-	b, err := fs.ReadFile(fsys, file)
-	if err != nil {
-		return erro.Wrap(err)
-	}
-	t, err := template.New(file).Funcs(pm.funcmap()).Parse(string(b))
-	if err != nil {
-		return erro.Wrap(err)
-	}
-	files = append([]string{"common.html"}, files...)
-	for _, file := range files {
-		b, err = fs.ReadFile(fsys, file)
-		if err != nil {
-			return erro.Wrap(err)
-		}
-		t, err = t.New(file).Parse(string(b))
-		if err != nil {
-			return erro.Wrap(err)
-		}
-	}
-	buf := bufpool.Get().(*bytes.Buffer)
-	defer func() {
-		buf.Reset()
-		bufpool.Put(buf)
-	}()
-	err = t.ExecuteTemplate(buf, file, data)
-	if err != nil {
-		return erro.Wrap(err)
-	}
-	buf.WriteTo(w)
-	return nil
 }
 
 func (pm *PageManager) getPage(ctx context.Context, path string) (page Page, localeCode string, err error) {

@@ -14,6 +14,7 @@ import (
 	"github.com/bokwoon95/pagemanager/keyderiv"
 	"github.com/bokwoon95/pagemanager/sq"
 	"github.com/bokwoon95/pagemanager/tables"
+	"github.com/bokwoon95/pagemanager/tpl"
 )
 
 type superadminSetupData struct {
@@ -92,7 +93,7 @@ func (pm *PageManager) superadminSetup(w http.ResponseWriter, r *http.Request) {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
 		}
-		err = pm.executeTemplates(w, r, tdata, pagemanagerFS, "superadmin_setup.html")
+		err = pm.tpl.Render(w, r, tdata, tpl.Files("superadmin_setup.html"))
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return

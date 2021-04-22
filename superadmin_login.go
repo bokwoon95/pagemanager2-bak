@@ -9,6 +9,7 @@ import (
 	"github.com/bokwoon95/pagemanager/hyforms"
 	"github.com/bokwoon95/pagemanager/sq"
 	"github.com/bokwoon95/pagemanager/tables"
+	"github.com/bokwoon95/pagemanager/tpl"
 )
 
 type superadminLoginData struct {
@@ -73,7 +74,7 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 		data.w, data.r = w, r
 		data.Title = "PageManager Superadmin Login"
 		data.Header = "PageManager Superadmin Login"
-		err = pm.executeTemplates(w, r, data, pagemanagerFS, "superadmin_login.html")
+		err = pm.tpl.Render(w, r, data, tpl.Files("superadmin_login.html"))
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
