@@ -21,15 +21,17 @@ type Renderer struct {
 	basefile             string
 	funcMap              map[string]interface{}
 	tmplOption           []string
+	tmplDelims           [2]string
 	cacheGet             func(w http.ResponseWriter, r *http.Request, files []string) (*template.Template, error)
 	cacheSet             func(w http.ResponseWriter, r *http.Request, files []string, t *template.Template) error
 	shouldJSON           func(w http.ResponseWriter, r *http.Request, data interface{}) (bool, error)
 	jsonMarshaller       func(w http.ResponseWriter, r *http.Request, data interface{}) ([]byte, error)
 	alwaysParseTemplates bool
 	init                 bool
+	redeclaredFS         bool
 	redeclaredFuncMap    bool
 	redeclaredTmplOption bool
-	redeclaredFS         bool
+	redeclaredTmplDelims bool
 }
 
 func New(fsys fs.FS, opts ...RenderOption) Renderer {
@@ -102,11 +104,11 @@ func (rdr Renderer) parseTemplate(w http.ResponseWriter, r *http.Request) (*temp
 	}
 	var t *template.Template
 	var err error
-	doNotCache := rdr.redeclaredFuncMap || rdr.redeclaredFS || rdr.redeclaredTmplOption
+	ignoreCache := rdr.redeclaredFS || rdr.redeclaredFuncMap || rdr.redeclaredTmplOption || rdr.redeclaredTmplDelims
 	allFiles := make([]string, len(rdr.files)+1)
 	allFiles[0] = rdr.basefile
 	copy(allFiles[1:], rdr.files)
-	if rdr.cacheGet != nil && !doNotCache {
+	if rdr.cacheGet != nil && !ignoreCache {
 		t, err = rdr.cacheGet(w, r, allFiles)
 		if err != nil {
 			return t, fmt.Errorf("tpl: error when calling cacheGet: %w", err)
@@ -120,11 +122,14 @@ func (rdr Renderer) parseTemplate(w http.ResponseWriter, r *http.Request) (*temp
 	}
 	var b []byte
 	t = template.New(rdr.basefile)
+	if len(rdr.funcMap) > 0 {
+		t.Funcs(rdr.funcMap)
+	}
 	if len(rdr.tmplOption) > 0 {
 		t.Option(rdr.tmplOption...)
 	}
-	if len(rdr.funcMap) > 0 {
-		t.Funcs(rdr.funcMap)
+	if rdr.tmplDelims[0] != "" || rdr.tmplDelims[1] != "" {
+		t.Delims(rdr.tmplDelims[0], rdr.tmplDelims[1])
 	}
 	b, err = fs.ReadFile(rdr.fs, rdr.basefile)
 	if err != nil {
@@ -144,7 +149,7 @@ func (rdr Renderer) parseTemplate(w http.ResponseWriter, r *http.Request) (*temp
 			return nil, fmt.Errorf("error when parsing file %s: %w", file, err)
 		}
 	}
-	if rdr.cacheSet != nil && !doNotCache {
+	if rdr.cacheSet != nil && !ignoreCache {
 		err = rdr.cacheSet(w, r, allFiles, t)
 		if err != nil {
 			return t, fmt.Errorf("error when calling cacheSet: %w", err)
@@ -215,7 +220,7 @@ func NewFuncMap(funcMap map[string]interface{}) RenderOption {
 	}
 }
 
-func Option(opt ...string) RenderOption {
+func TemplateOption(opt ...string) RenderOption {
 	return func(rdr *Renderer) {
 		if !rdr.init {
 			rdr.redeclaredTmplOption = true
@@ -224,8 +229,14 @@ func Option(opt ...string) RenderOption {
 	}
 }
 
-func TemplateOption(opt ...string) RenderOption {
-	return func(rdr *Renderer) { rdr.tmplOption = append(rdr.tmplOption, opt...) }
+func TemplateDelims(left, right string) RenderOption {
+	return func(rdr *Renderer) {
+		if !rdr.init {
+			rdr.redeclaredTmplDelims = true
+		}
+		rdr.tmplDelims[0] = left
+		rdr.tmplDelims[1] = right
+	}
 }
 
 func DefaultCache() RenderOption {
