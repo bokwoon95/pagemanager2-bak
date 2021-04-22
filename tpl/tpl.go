@@ -171,29 +171,21 @@ func FS(fsys fs.FS) RenderOption {
 
 func Files(files ...string) RenderOption {
 	return func(rdr *Renderer) {
-		if !rdr.init {
-			if len(files) == 0 {
-				return
-			}
-			rdr.basefile = files[0]
-			rdr.files = append(rdr.files, files[1:]...)
-		} else {
-			rdr.files = append(rdr.files, files...)
+		if len(files) == 0 {
+			return
 		}
+		rdr.basefile = files[0]
+		rdr.files = append(rdr.files, files[1:]...)
 	}
 }
 
 func NewFiles(files ...string) RenderOption {
 	return func(rdr *Renderer) {
-		if !rdr.init {
-			if len(files) == 0 {
-				return
-			}
-			rdr.basefile = files[0]
-			rdr.files = files[1:]
-		} else {
-			rdr.files = files
+		if len(files) == 0 {
+			return
 		}
+		rdr.basefile = files[0]
+		rdr.files = files[1:]
 	}
 }
 
