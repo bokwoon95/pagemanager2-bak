@@ -33,7 +33,7 @@ type Renderer struct {
 }
 
 func New(fsys fs.FS, opts ...RenderOption) Renderer {
-	rdr := Renderer{fs: fsys, funcMap: make(map[string]interface{})}
+	rdr := Renderer{fs: fsys}
 	rdr.init = true
 	for _, opt := range opts {
 		opt(&rdr)
@@ -215,7 +215,7 @@ func FuncMap(funcMap map[string]interface{}) RenderOption {
 
 func NewFuncMap(funcMap map[string]interface{}) RenderOption {
 	return func(rdr *Renderer) {
-		rdr.funcMap = make(map[string]interface{})
+		rdr.funcMap = nil
 		FuncMap(funcMap)(rdr)
 	}
 }
