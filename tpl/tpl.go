@@ -174,6 +174,9 @@ func Files(files ...string) RenderOption {
 		if len(files) == 0 {
 			return
 		}
+		if rdr.basefile != "" {
+			rdr.files = append(rdr.files, rdr.basefile)
+		}
 		rdr.basefile = files[0]
 		rdr.files = append(rdr.files, files[1:]...)
 	}
@@ -227,12 +230,17 @@ func TemplateOption(opt ...string) RenderOption {
 
 func DefaultCache() RenderOption {
 	cache := make(map[string]*template.Template)
+	mu := &sync.RWMutex{}
 	cacheGet := func(_ http.ResponseWriter, _ *http.Request, files []string) (*template.Template, error) {
 		fullname := strings.Join(files, "\n")
+		mu.RLock()
+		defer mu.RUnlock()
 		return cache[fullname], nil
 	}
 	cacheSet := func(_ http.ResponseWriter, _ *http.Request, files []string, t *template.Template) error {
 		fullname := strings.Join(files, "\n")
+		mu.Lock()
+		defer mu.Unlock()
 		cache[fullname] = t
 		return nil
 	}
