@@ -111,7 +111,9 @@ func (rdr Renderer) parseTemplate(w http.ResponseWriter, r *http.Request) (*temp
 		if err != nil {
 			return t, fmt.Errorf("tpl: error when calling cacheGet: %w", err)
 		}
-		return t, nil
+		if t != nil {
+			return t, nil
+		}
 	}
 	if rdr.fs == nil {
 		return nil, fmt.Errorf("no FS provided")
