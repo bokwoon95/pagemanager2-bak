@@ -24,7 +24,7 @@ func (data *createPageData) Form() (template.HTML, error) {
 }
 
 func (data *createPageData) JS() (template.HTML, error) {
-	return hy.Marshal(hy.NewSanitizer("script"), InlinedJS(data.w, pagemanagerFS, []string{"create_page.js"}))
+	return hy.Marshal(hy.UnsafeSanitizer(), InlinedJS(data.w, pagemanagerFS, []string{"create_page.js"}))
 }
 
 func (data *createPageData) formCallback(form *hyforms.Form) {
@@ -109,13 +109,8 @@ func (data *createPageData) formCallback(form *hyforms.Form) {
 }
 
 func (pm *PageManager) createPage(w http.ResponseWriter, r *http.Request) {
-	type templateData struct {
-		Form template.HTML
-		JS   template.HTML
-	}
-	data := &createPageData{}
+	data := &createPageData{w: w, r: r}
 	r.ParseForm()
-	var err error
 	switch r.Method {
 	case "GET":
 		user := pm.getUser(w, r)
@@ -133,22 +128,11 @@ func (pm *PageManager) createPage(w http.ResponseWriter, r *http.Request) {
 			pm.Forbidden(w, r)
 			return
 		}
-		tdata := templateData{}
 		if data.URL != "" {
 			PAGES := tables.NEW_PAGES(r.Context(), "p")
 			data.URLExists, _ = sq.Exists(pm.dataDB, sq.SQLite.From(PAGES).Where(PAGES.URL.EqString(data.URL)))
 		}
-		tdata.Form, err = hyforms.MarshalForm(nil, w, r, data.formCallback)
-		if err != nil {
-			pm.InternalServerError(w, r, erro.Wrap(err))
-			return
-		}
-		tdata.JS, err = hy.Marshal(hy.NewSanitizer("script"), InlinedJS(w, pagemanagerFS, []string{"create_page.js"}))
-		if err != nil {
-			pm.InternalServerError(w, r, erro.Wrap(err))
-			return
-		}
-		err = pm.executeTemplates(w, tdata, pagemanagerFS, "create_page.html")
+		err := pm.executeTemplates(w, data, pagemanagerFS, "create_page.html")
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return

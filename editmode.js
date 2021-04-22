@@ -17,8 +17,8 @@ document.addEventListener("DOMContentLoaded", function main() {
     const insertSelector = node.getAttribute("data-pm.insertafter");
     const template = document.querySelector(`#${templateSelector}`);
     const insertPoint = document.querySelector(`#${insertSelector}`);
-    template.setAttribute("hidden", "true");
-    insertPoint.setAttribute("hidden", "true");
+    template.hidden = true;
+    insertPoint.hidden = true;
     node.addEventListener("click", function () {
       const newNode = template.cloneNode(true);
       newNode.removeAttribute("id");
@@ -730,7 +730,7 @@ document.addEventListener("DOMContentLoaded", function main() {
   }
 
   function pmContenteditable(node) {
-    node.setAttribute("contenteditable", true);
+    node.contenteditable = true;
     node.classList.add("contenteditable");
   }
 

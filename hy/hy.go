@@ -33,7 +33,13 @@ var singletonElements = map[string]struct{}{
 
 var bufpool = sync.Pool{New: func() interface{} { return &strings.Builder{} }}
 
-var defaultSanitizer = defaultSanitizerConfig(bluemonday.UGCPolicy())
+var (
+	defaultSanitizer = NewSanitizer()
+	unsafeSanitizer  = NewSanitizer("script", "link")
+)
+
+func DefaultSanitizer() Sanitizer { return defaultSanitizer }
+func UnsafeSanitizer() Sanitizer  { return unsafeSanitizer }
 
 // attributesMap is the list of attributes that we allow for each tag.
 // Attributes were referenced from MDN docs, so should be comprehensive.
@@ -385,7 +391,7 @@ func Marshal(s Sanitizer, el Element) (template.HTML, error) {
 		return "", err
 	}
 	if s == nil {
-		s = defaultSanitizer
+		s = DefaultSanitizer()
 	}
 	output := s.Sanitize(buf.String())
 	return template.HTML(output), nil
@@ -448,18 +454,11 @@ func Stringify(v interface{}) string {
 	return fmt.Sprint(v)
 }
 
-func AttributesMap() map[string][]string {
-	m := make(map[string][]string)
-	for k, v := range attributesMap {
-		m[k] = v
-	}
-	return m
-}
-
-func defaultSanitizerConfig(p *bluemonday.Policy) *bluemonday.Policy {
+func NewSanitizer(allowedTags ...string) Sanitizer {
 	defaultSanitizerTags := []string{
 		"form", "input", "button", "label", "select", "option", "optgroup", "pre", "a", "fieldset", "legend", "textarea",
 	}
+	p := bluemonday.UGCPolicy()
 	p.AllowStyling()
 	p.AllowImages()
 	p.AllowLists()
@@ -469,12 +468,6 @@ func defaultSanitizerConfig(p *bluemonday.Policy) *bluemonday.Policy {
 	for _, tag := range defaultSanitizerTags {
 		p.AllowAttrs(attributesMap[tag]...).OnElements(tag)
 	}
-	return p
-}
-
-func NewSanitizer(allowedTags ...string) Sanitizer {
-	p := bluemonday.UGCPolicy()
-	defaultSanitizerConfig(p)
 	for _, tag := range allowedTags {
 		p.AllowAttrs(attributesMap[tag]...).OnElements(tag)
 	}
