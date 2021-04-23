@@ -2,6 +2,7 @@
 package encrypthash
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
@@ -137,13 +138,13 @@ func (box Box) Hash(msg []byte) (hash []byte, err error) {
 			return nil, err
 		}
 	}
-	hashedKey := blake2b.Sum512([]byte(key))
+	hashedKey := blake2b.Sum512(key)
 	hashedKeyLower := hashedKey[32:]
 	h, _ := blake2b.New512(hashedKeyLower)
 	h.Reset()
-	h.Write([]byte(msg))
-	sum := h.Sum(nil)
-	return sum, nil
+	h.Write(msg)
+	hash = h.Sum(nil)
+	return hash, nil
 }
 
 func (box Box) HashAll(msg []byte) (hashes [][]byte, err error) {
@@ -169,11 +170,11 @@ func (box Box) HashAll(msg []byte) (hashes [][]byte, err error) {
 				return hashes, err
 			}
 		}
-		hashedKey := blake2b.Sum512([]byte(key))
+		hashedKey := blake2b.Sum512(key)
 		hashedKeyLower := hashedKey[32:]
 		h, _ := blake2b.New512(hashedKeyLower)
 		h.Reset()
-		h.Write([]byte(msg))
+		h.Write(msg)
 		hash := h.Sum(nil)
 		hashes = append(hashes, hash)
 	}
@@ -204,11 +205,11 @@ func (box Box) VerifyHash(msg []byte, hash []byte) error {
 				return err
 			}
 		}
-		hashedKey := blake2b.Sum512([]byte(key))
+		hashedKey := blake2b.Sum512(key)
 		hashedKeyLower := hashedKey[32:]
 		h, _ := blake2b.New512(hashedKeyLower)
 		h.Reset()
-		h.Write([]byte(msg))
+		h.Write(msg)
 		computedHash := h.Sum(nil)
 		if subtle.ConstantTimeCompare(computedHash, hash) == 1 {
 			return nil
@@ -222,18 +223,14 @@ func (box Box) Base64Encrypt(plaintext []byte) (b64Ciphertext []byte, err error)
 	if err != nil {
 		return nil, err
 	}
-	b64Ciphertext = make([]byte, base64.RawURLEncoding.EncodedLen(len(ciphertext)))
-	base64.RawURLEncoding.Encode(b64Ciphertext, ciphertext)
-	return b64Ciphertext, nil
+	return base64Encode(ciphertext), nil
 }
 
 func (box Box) Base64Decrypt(b64Ciphertext []byte) (plaintext []byte, err error) {
-	ciphertext := make([]byte, base64.RawURLEncoding.DecodedLen(len(b64Ciphertext)))
-	n, err := base64.RawURLEncoding.Decode(ciphertext, b64Ciphertext)
+	ciphertext, err := base64Decode(b64Ciphertext)
 	if err != nil {
 		return nil, err
 	}
-	ciphertext = ciphertext[:n]
 	plaintext, err = box.Decrypt(ciphertext)
 	return plaintext, err
 }
@@ -254,24 +251,18 @@ func (box Box) Base64Hash(msg []byte) (b64HashedMsg []byte, err error) {
 }
 
 func (box Box) Base64VerifyHash(b64HashedMsg []byte) (msg []byte, err error) {
-	dotIndex := -1
-	for i, c := range b64HashedMsg {
-		if c == '~' {
-			dotIndex = i
-			break
-		}
-	}
-	if dotIndex < 0 {
+	i := bytes.Index(b64HashedMsg, []byte{'~'})
+	if i < 0 {
 		return nil, ErrHashedMsgInvalid
 	}
-	b64Msg := b64HashedMsg[:dotIndex]
+	b64Msg := b64HashedMsg[:i]
 	msg = make([]byte, base64.RawURLEncoding.DecodedLen(len(b64Msg)))
 	n, err := base64.RawURLEncoding.Decode(msg, b64Msg)
 	if err != nil {
 		return nil, err
 	}
 	msg = msg[:n]
-	b64Hash := b64HashedMsg[dotIndex+1:]
+	b64Hash := b64HashedMsg[i+1:]
 	hash := make([]byte, base64.RawURLEncoding.DecodedLen(len(b64Hash)))
 	n, err = base64.RawURLEncoding.Decode(hash, b64Hash)
 	if err != nil {
@@ -282,4 +273,16 @@ func (box Box) Base64VerifyHash(b64HashedMsg []byte) (msg []byte, err error) {
 		return nil, err
 	}
 	return msg, nil
+}
+
+func base64Encode(src []byte) []byte {
+	buf := make([]byte, base64.RawURLEncoding.EncodedLen(len(src)))
+	base64.RawURLEncoding.Encode(buf, src)
+	return buf
+}
+
+func base64Decode(src []byte) ([]byte, error) {
+	dbuf := make([]byte, base64.RawURLEncoding.DecodedLen(len(src)))
+	n, err := base64.RawURLEncoding.Decode(dbuf, src)
+	return dbuf[:n], err
 }
