@@ -218,6 +218,18 @@ func (box Box) VerifyHash(msg []byte, hash []byte) error {
 	return ErrHashInvalid
 }
 
+func base64Encode(src []byte) []byte {
+	buf := make([]byte, base64.RawURLEncoding.EncodedLen(len(src)))
+	base64.RawURLEncoding.Encode(buf, src)
+	return buf
+}
+
+func base64Decode(src []byte) ([]byte, error) {
+	dbuf := make([]byte, base64.RawURLEncoding.DecodedLen(len(src)))
+	n, err := base64.RawURLEncoding.Decode(dbuf, src)
+	return dbuf[:n], err
+}
+
 func (box Box) Base64Encrypt(plaintext []byte) (b64Ciphertext []byte, err error) {
 	ciphertext, err := box.Encrypt(plaintext)
 	if err != nil {
@@ -264,16 +276,4 @@ func (box Box) Base64VerifyHash(b64HashedMsg []byte) (msg []byte, err error) {
 		return nil, err
 	}
 	return msg, nil
-}
-
-func base64Encode(src []byte) []byte {
-	buf := make([]byte, base64.RawURLEncoding.EncodedLen(len(src)))
-	base64.RawURLEncoding.Encode(buf, src)
-	return buf
-}
-
-func base64Decode(src []byte) ([]byte, error) {
-	dbuf := make([]byte, base64.RawURLEncoding.DecodedLen(len(src)))
-	n, err := base64.RawURLEncoding.Decode(dbuf, src)
-	return dbuf[:n], err
 }
