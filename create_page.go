@@ -70,7 +70,9 @@ func (data *createPageData) formCallback(form *hyforms.Form) {
 		if len(templateSelectOptions) > 0 {
 			templateSelects.Append("div[hidden]", hy.Attr{"id": "theme:" + themeName}, templateSelect)
 		} else {
-			templateSelects.Append("div[hidden]", hy.Attr{"id": "theme:" + themeName}, hy.Txt("template", themeName, "has no templates."))
+			templateSelects.Append("div[hidden]", hy.Attr{"id": "theme:" + themeName},
+				form.Select(templateSelectName, hyforms.Options{{Value: "<empty>", Display: "<empty>"}}),
+			)
 		}
 	}
 	pluginName := form.Text("pm-plugin-name", data.PluginName).Set("#pm-plugin-name", nil)
