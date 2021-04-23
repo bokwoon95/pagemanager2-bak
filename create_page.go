@@ -3,6 +3,7 @@ package pagemanager
 import (
 	"html/template"
 	"net/http"
+	"sort"
 
 	"github.com/bokwoon95/pagemanager/erro"
 	"github.com/bokwoon95/pagemanager/hy"
@@ -13,10 +14,12 @@ import (
 )
 
 type createPageData struct {
-	w         http.ResponseWriter `json:"-"`
-	r         *http.Request       `json:"-"`
-	URLExists bool
+	w http.ResponseWriter `json:"-"`
+	r *http.Request       `json:"-"`
 	Page
+	URLExists bool
+	Themes    []string
+	Templates [][]string
 }
 
 func (data *createPageData) Form() (template.HTML, error) {
@@ -49,16 +52,34 @@ func (data *createPageData) formCallback(form *hyforms.Form) {
 		{Value: PageTypeContent, Display: "Content", Selected: data.PageType == PageTypeContent},
 		{Value: PageTypeRedirect, Display: "Redirect", Selected: data.PageType == PageTypeRedirect},
 		{Value: PageTypeDisabled, Display: "Disabled", Selected: data.PageType == PageTypeDisabled},
-	}).Set("#pm-page-type", hy.Attr{"size": "5"})
-	themePath := form.Text("pm-theme-path", data.ThemePath).Set("#pm-theme-path", nil)
-	templateName := form.Text("pm-template-name", data.TemplateName).Set("#pm-template-name", nil)
+	}).Set("#pm-page-type.pointer", hy.Attr{"size": "5"})
+	// themePath := form.Text("pm-theme-path", data.ThemePath).Set("#pm-theme-path", nil)
+	var themePathOptions hyforms.Options
+	for i, themeName := range data.Themes {
+		themePathOptions.Append(hyforms.Option{Value: themeName, Display: themeName, Selected: i == 0})
+	}
+	themePath := form.Select("pm-theme-path", themePathOptions).Set("#pm-theme-path.pointer", hy.Attr{"size": "5"})
+	var templateSelects hy.Elements
+	const templateSelectName = "pm-template-name"
+	for i, themeName := range data.Themes {
+		var templateSelectOptions hyforms.Options
+		for j, templateName := range data.Templates[i] {
+			templateSelectOptions.Append(hyforms.Option{Value: templateName, Display: templateName, Selected: j == 0})
+		}
+		templateSelect := form.Select(templateSelectName, templateSelectOptions).Set(".pointer", hy.Attr{"size": "5"})
+		if len(templateSelectOptions) > 0 {
+			templateSelects.Append("div[hidden]", hy.Attr{"id": "theme:" + themeName}, templateSelect)
+		} else {
+			templateSelects.Append("div[hidden]", hy.Attr{"id": "theme:" + themeName}, hy.Txt("template", themeName, "has no templates."))
+		}
+	}
 	pluginName := form.Text("pm-plugin-name", data.PluginName).Set("#pm-plugin-name", nil)
 	handlerName := form.Text("pm-handler-name", data.HandlerName).Set("#pm-handler-name", nil)
 	content := form.Textarea("pm-content", data.Content).Set("#pm-content", nil)
 	redirectURL := form.Text("pm-redirect-url", data.RedirectURL).Set("#pm-redirect-url", nil)
 	disabled := form.Checkbox("pm-disabled", "", data.Disabled).Set("#pm-disabled.pointer.dib", nil)
 
-	form.Set("", hy.Attr{"method": "POST"})
+	form.Set("#pm-create-page", hy.Attr{"method": "POST"})
 	form.AppendElements(
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": url.ID()}, hy.Txt("URL: "))),
 		hy.H("div", nil, url),
@@ -75,8 +96,8 @@ func (data *createPageData) formCallback(form *hyforms.Form) {
 	form.Append("div[hidden]", hy.Attr{"id": TemplateGroupID},
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": themePath.ID()}, hy.Txt("Theme Path: "))),
 		hy.H("div", nil, themePath),
-		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": templateName.ID()}, hy.Txt("Template Name: "))),
-		hy.H("div", nil, templateName),
+		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{}, hy.Txt("Template Name: "))),
+		templateSelects,
 	)
 	form.Append("div[hidden]", hy.Attr{"id": PluginGroupID},
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": pluginName.ID()}, hy.Txt("Plugin Name: "))),
@@ -101,13 +122,35 @@ func (data *createPageData) formCallback(form *hyforms.Form) {
 		data.URL = url.Value()
 		data.PageType = pageType.Value()
 		data.ThemePath = themePath.Value()
-		data.TemplateName = templateName.Value()
+		data.TemplateName = form.Request().FormValue(templateSelectName)
 		data.PluginName = pluginName.Value()
 		data.HandlerName = handlerName.Value()
 		data.Content = content.Value()
 		data.RedirectURL = redirectURL.Value()
 		data.Disabled = disabled.Checked()
 	})
+}
+
+func (data *createPageData) processThemes(pmThemes map[string]theme) {
+	data.Themes = make([]string, len(pmThemes))
+	data.Templates = make([][]string, len(pmThemes))
+	i := 0
+	for themeName := range pmThemes {
+		data.Themes[i] = themeName
+		i++
+	}
+	sort.Strings(data.Themes)
+	for i, themeName := range data.Themes {
+		theme := pmThemes[themeName]
+		templates := make([]string, len(theme.themeTemplates))
+		j := 0
+		for templateName := range theme.themeTemplates {
+			templates[j] = templateName
+			j++
+		}
+		sort.Strings(templates)
+		data.Templates[i] = templates
+	}
 }
 
 func (pm *PageManager) createPage(w http.ResponseWriter, r *http.Request) {
@@ -129,6 +172,7 @@ func (pm *PageManager) createPage(w http.ResponseWriter, r *http.Request) {
 			PAGES := tables.NEW_PAGES(r.Context(), "p")
 			data.URLExists, _ = sq.Exists(pm.dataDB, sq.SQLite.From(PAGES).Where(PAGES.URL.EqString(data.URL)))
 		}
+		data.processThemes(pm.themes)
 		err := pm.tpl.Render(w, r, data, tpl.Files("create_page.html"))
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))

@@ -118,6 +118,7 @@ func New() (*PageManager, error) {
 		tpl.AlwaysParseTemplates(true),
 		tpl.DefaultCache(),
 	)
+	// spew.Dump(pm.themes)
 	return pm, nil
 }
 

@@ -40,6 +40,8 @@ func (f *Form) AppendHTML(buf *strings.Builder) error {
 	return nil
 }
 
+func (f *Form) Request() *http.Request { return f.request }
+
 func (f *Form) registerName(name string, skip int) {
 	if f.mode == FormModeUnmarshal {
 		return

@@ -16,17 +16,14 @@ type Input struct {
 }
 
 func (f *Form) Input(inputType string, name string, defaultValue string) *Input {
-	f.registerName(name, 1)
 	return &Input{form: f, inputType: inputType, name: name, defaultValue: defaultValue}
 }
 
 func (f *Form) Text(name string, defaultValue string) *Input {
-	f.registerName(name, 1)
 	return &Input{form: f, inputType: "text", name: name, defaultValue: defaultValue}
 }
 
 func (f *Form) Hidden(name string, defaultValue string) *Input {
-	f.registerName(name, 1)
 	return &Input{form: f, inputType: "hidden", name: name, defaultValue: defaultValue}
 }
 
@@ -117,12 +114,10 @@ type ToggledInput struct {
 }
 
 func (f *Form) Checkbox(name string, value string, checked bool) *ToggledInput {
-	f.registerName(name, 1)
 	return &ToggledInput{form: f, inputType: "checkbox", name: name, value: value, checked: checked}
 }
 
 func (f *Form) Radio(name string, value string, checked bool) *ToggledInput {
-	f.registerName(name, 1)
 	return &ToggledInput{form: f, inputType: "radio", name: name, value: value, checked: checked}
 }
 
@@ -193,12 +188,10 @@ type ToggledInputs struct {
 }
 
 func (f *Form) Checkboxes(name string, options []string) *ToggledInputs {
-	f.registerName(name, 1)
 	return &ToggledInputs{form: f, inputType: "checkbox", name: name, options: options}
 }
 
 func (f *Form) Radios(name string, options []string) *ToggledInputs {
-	f.registerName(name, 1)
 	return &ToggledInputs{form: f, inputType: "radio", name: name, options: options}
 }
 
@@ -230,6 +223,10 @@ func (i *ToggledInputs) Values() []string {
 
 type Options []Option
 
+func (opts *Options) Append(opt Option) {
+	*opts = append(*opts, opt)
+}
+
 type Option struct {
 	Value      string
 	Display    string
@@ -241,17 +238,17 @@ type Option struct {
 	Options    Options
 }
 
-func (o Option) AppendHTML(buf *strings.Builder) error {
-	attrs := hy.ParseAttributes(o.Selector, o.Attributes)
+func (opt Option) AppendHTML(buf *strings.Builder) error {
+	attrs := hy.ParseAttributes(opt.Selector, opt.Attributes)
 	attrs.Tag = "option"
-	attrs.Dict["value"] = o.Value
-	if o.Disabled {
+	attrs.Dict["value"] = opt.Value
+	if opt.Disabled {
 		attrs.Dict["disabled"] = hy.Enabled
 	}
-	if o.Selected {
+	if opt.Selected {
 		attrs.Dict["selected"] = hy.Enabled
 	}
-	err := hy.AppendHTML(buf, attrs, []hy.Element{hy.Txt(o.Display)})
+	err := hy.AppendHTML(buf, attrs, []hy.Element{hy.Txt(opt.Display)})
 	if err != nil {
 		return err
 	}
@@ -266,7 +263,6 @@ type SelectInput struct {
 }
 
 func (f *Form) Select(name string, options []Option) *SelectInput {
-	f.registerName(name, 1)
 	return &SelectInput{form: f, name: name, Options: options}
 }
 
@@ -283,6 +279,7 @@ func (i *SelectInput) AppendHTML(buf *strings.Builder) error {
 		return i.attrs.ParseErr
 	}
 	buf.WriteString(`<select`)
+	i.attrs.Dict["name"] = i.name
 	hy.AppendAttributes(buf, i.attrs)
 	buf.WriteString(`>`)
 	var err error
@@ -343,7 +340,6 @@ type TextareaInput struct {
 }
 
 func (f *Form) Textarea(name string, defaultValue string) *TextareaInput {
-	f.registerName(name, 1)
 	return &TextareaInput{form: f, name: name, defaultValue: defaultValue}
 }
 
