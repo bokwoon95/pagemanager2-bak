@@ -240,13 +240,9 @@ func (box Box) Base64Hash(msg []byte) (b64HashedMsg []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	b64Msg := make([]byte, base64.RawURLEncoding.EncodedLen(len(msg)))
-	base64.RawURLEncoding.Encode(b64Msg, msg)
-	b64Hash := make([]byte, base64.RawURLEncoding.EncodedLen(len(hash)))
-	base64.RawURLEncoding.Encode(b64Hash, hash)
-	b64HashedMsg = append(b64HashedMsg, b64Msg...)
+	b64HashedMsg = append(b64HashedMsg, base64Encode(msg)...)
 	b64HashedMsg = append(b64HashedMsg, '~')
-	b64HashedMsg = append(b64HashedMsg, b64Hash...)
+	b64HashedMsg = append(b64HashedMsg, base64Encode(hash)...)
 	return b64HashedMsg, nil
 }
 
@@ -255,16 +251,11 @@ func (box Box) Base64VerifyHash(b64HashedMsg []byte) (msg []byte, err error) {
 	if i < 0 {
 		return nil, ErrHashedMsgInvalid
 	}
-	b64Msg := b64HashedMsg[:i]
-	msg = make([]byte, base64.RawURLEncoding.DecodedLen(len(b64Msg)))
-	n, err := base64.RawURLEncoding.Decode(msg, b64Msg)
+	msg, err = base64Decode(b64HashedMsg[:i])
 	if err != nil {
 		return nil, err
 	}
-	msg = msg[:n]
-	b64Hash := b64HashedMsg[i+1:]
-	hash := make([]byte, base64.RawURLEncoding.DecodedLen(len(b64Hash)))
-	n, err = base64.RawURLEncoding.Decode(hash, b64Hash)
+	hash, err := base64Decode(b64HashedMsg[i+1:])
 	if err != nil {
 		return nil, err
 	}
