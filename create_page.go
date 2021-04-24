@@ -42,7 +42,7 @@ func (data *createPageData) formCallback(form *hyforms.Form) {
 	if hyforms.Validate(data.URL, hyforms.IsRelativeURL) == nil {
 		urlValue = data.URL
 	}
-	url := form.Text("pm-url", urlValue).Set("#pm-url", nil)
+	pageURL := form.Text("pm-url", urlValue).Set("#pm-url", nil)
 	if data.PageType == "" {
 		data.PageType = PageTypeTemplate
 	}
@@ -53,28 +53,34 @@ func (data *createPageData) formCallback(form *hyforms.Form) {
 		{Value: PageTypeRedirect, Display: "Redirect", Selected: data.PageType == PageTypeRedirect},
 		{Value: PageTypeDisabled, Display: "Disabled", Selected: data.PageType == PageTypeDisabled},
 	}).Set("#pm-page-type.pointer", hy.Attr{"size": "5"})
-	// themePath := form.Text("pm-theme-path", data.ThemePath).Set("#pm-theme-path", nil)
 	var themePathOptions hyforms.Options
 	for i, themeName := range data.Themes {
 		themePathOptions.Append(hyforms.Option{Value: themeName, Display: themeName, Selected: i == 0})
 	}
-	themePath := form.Select("pm-theme-path", themePathOptions).Set("#pm-theme-path.pointer", hy.Attr{"size": "5"})
-	var templateSelects hy.Elements
-	const templateSelectName = "pm-template-name"
-	for i, themeName := range data.Themes {
-		var templateSelectOptions hyforms.Options
-		for j, templateName := range data.Templates[i] {
-			templateSelectOptions.Append(hyforms.Option{Value: templateName, Display: templateName, Selected: j == 0})
+	themePath := func() *hyforms.SelectInput {
+		var opts hyforms.Options
+		for i, themeName := range data.Themes {
+			opts.Append(hyforms.Option{Value: themeName, Display: themeName, Selected: i == 0})
 		}
-		templateSelect := form.Select(templateSelectName, templateSelectOptions).Set(".pointer", hy.Attr{"size": "5"})
-		if len(templateSelectOptions) > 0 {
-			templateSelects.Append("div[hidden]", hy.Attr{"id": "theme:" + themeName}, templateSelect)
-		} else {
-			templateSelects.Append("div[hidden]", hy.Attr{"id": "theme:" + themeName},
-				form.Select(templateSelectName, hyforms.Options{{Value: "<empty>", Display: "<empty>"}}),
-			)
+		return form.Select("pm-theme-path", opts).Set("#pm-theme-path.pointer", hy.Attr{"size": "5"})
+	}()
+	templateNames := func() hy.Elements {
+		const prefix = "pm-templatefor-"
+		var els hy.Elements
+		for i, themeName := range data.Themes {
+			name := prefix + themeName
+			if len(data.Templates[i]) > 0 {
+				var opts hyforms.Options
+				for j, templateName := range data.Templates[i] {
+					opts.Append(hyforms.Option{Value: templateName, Display: templateName, Selected: j == 0})
+				}
+				els.Append("div[hidden]", hy.Attr{"id": name}, form.Select(name, opts).Set(".pointer", hy.Attr{"size": "5"}))
+			} else {
+				els.Append("div[hidden]", hy.Attr{"id": name}, form.Select(name, hyforms.Options{{Display: "<empty>"}}))
+			}
 		}
-	}
+		return els
+	}()
 	pluginName := form.Text("pm-plugin-name", data.PluginName).Set("#pm-plugin-name", nil)
 	handlerName := form.Text("pm-handler-name", data.HandlerName).Set("#pm-handler-name", nil)
 	content := form.Textarea("pm-content", data.Content).Set("#pm-content", nil)
@@ -83,8 +89,8 @@ func (data *createPageData) formCallback(form *hyforms.Form) {
 
 	form.Set("#pm-create-page", hy.Attr{"method": "POST"})
 	form.AppendElements(
-		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": url.ID()}, hy.Txt("URL: "))),
-		hy.H("div", nil, url),
+		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": pageURL.ID()}, hy.Txt("URL: "))),
+		hy.H("div", nil, pageURL),
 	)
 	if data.URLExists {
 		form.Append("div.f6.red", nil, hy.Txt("error: url", data.URL, "already exists"))
@@ -99,7 +105,7 @@ func (data *createPageData) formCallback(form *hyforms.Form) {
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": themePath.ID()}, hy.Txt("Theme Path: "))),
 		hy.H("div", nil, themePath),
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{}, hy.Txt("Template Name: "))),
-		templateSelects,
+		templateNames,
 	)
 	form.Append("div[hidden]", hy.Attr{"id": PluginGroupID},
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": pluginName.ID()}, hy.Txt("Plugin Name: "))),
@@ -121,10 +127,10 @@ func (data *createPageData) formCallback(form *hyforms.Form) {
 	form.Append("div.mt3", nil, hy.H("button.pointer.pa2.bg-white", hy.Attr{"type": "submit"}, hy.Txt("Create Page")))
 
 	form.Unmarshal(func() {
-		data.URL = url.Value()
+		data.URL = pageURL.Value()
 		data.PageType = pageType.Value()
 		data.ThemePath = themePath.Value()
-		data.TemplateName = form.Request().FormValue(templateSelectName)
+		// data.TemplateName = form.Request().FormValue(templateSelectName)
 		data.PluginName = pluginName.Value()
 		data.HandlerName = handlerName.Value()
 		data.Content = content.Value()

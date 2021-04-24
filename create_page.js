@@ -1,8 +1,8 @@
 "use strict";
 document.addEventListener("DOMContentLoaded", function () {
-  const selectPageType = document.querySelector("#pm-page-type");
-  if (!selectPageType) {
-    throw new Error("#pm-page-type not found");
+  const pageType = document.querySelector("select#pm-page-type");
+  if (!pageType) {
+    throw new Error("select#pm-page-type not found");
   }
   const groups = {
     template: document.querySelector("#template-group"),
@@ -11,30 +11,19 @@ document.addEventListener("DOMContentLoaded", function () {
     redirect: document.querySelector("#redirect-group"),
     disabled: document.querySelector("#disabled-group"),
   };
-  const themePath = document.querySelector("#pm-theme-path");
+  const themePath = document.querySelector("select#pm-theme-path");
   if (!themePath) {
-    throw new Error("#pm-theme-path not found");
+    throw new Error("select#pm-theme-path not found");
   }
-  const themes = {};
-  for (const opt of themePath?.children) {
-    if (!(opt instanceof HTMLOptionElement)) {
-      continue;
-    }
-    themes[opt.value] = document.getElementById(`theme:${opt.value}`);
-  }
-  window.themes = themes;
   function render() {
     for (const [name, group] of Object.entries(groups)) {
-      group.hidden = name !== selectPageType.value;
+      group.hidden = pageType.value !== name;
     }
-    for (const opt of themePath.children) {
-      if (!(opt instanceof HTMLOptionElement)) {
-        continue;
-      }
-      themes[opt.value].hidden = !(selectPageType.value === "template" && opt.selected);
+    for (const group of document.querySelectorAll("[id^=pm-templatefor-]")) {
+      group.hidden = !(pageType.value === "template" && group.id === `pm-templatefor-${themePath.value}`);
     }
   }
   render();
-  selectPageType.addEventListener("input", render);
+  pageType.addEventListener("input", render);
   themePath.addEventListener("input", render);
 });
