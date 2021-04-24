@@ -72,7 +72,7 @@ func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 			_ = hyforms.SetCookieValue(w, cookieLoginRedirect, LocaleURL(r, r.URL.Path), nil)
 			pm.RedirectToLogin(w, r)
 			return
-		case !user.HasPagePerms(PagePermsRead):
+		case !user.HasPagePerms(PagePermsView):
 			pm.Forbidden(w, r)
 			return
 		}

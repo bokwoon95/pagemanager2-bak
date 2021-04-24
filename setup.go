@@ -295,7 +295,7 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 		name string
 		data map[string]interface{}
 	}{
-		{roleSuperadmin, map[string]interface{}{permissionPagePerms: PagePermsCreate | PagePermsRead | PagePermsUpdate | PagePermsDelete}},
+		{roleSuperadmin, map[string]interface{}{permissionPagePerms: PagePermsCreate | PagePermsView | PagePermsUpdate | PagePermsDelete}},
 	}
 	_, _, err = sq.Exec(db, sq.SQLite.
 		InsertInto(ag).
@@ -365,7 +365,7 @@ type PagePerms int
 
 const (
 	PagePermsCreate PagePerms = 0b1
-	PagePermsRead   PagePerms = 0b10
+	PagePermsView   PagePerms = 0b10
 	PagePermsUpdate PagePerms = 0b100
 	PagePermsDelete PagePerms = 0b1000
 )
