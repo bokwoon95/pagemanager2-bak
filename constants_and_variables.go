@@ -45,11 +45,11 @@ const (
 )
 
 const (
-	roleSuperadmin = "pm-superadmin"
+	roleSuperadmin = "pagemanager:superadmin"
 )
 
 const (
-	permissionPagePerms = "pm-page-perms"
+	permissionPagePerms = "pagemanager:page-perms"
 )
 
 const (
