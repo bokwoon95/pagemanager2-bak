@@ -97,6 +97,17 @@ func getThemes(datafolder string) (themes map[string]theme, fallbackAssetsIndex 
 	return themes, fallbackAssetsIndex, nil
 }
 
+func (pm *PageManager) refreshThemes() error {
+	themes, fallbackAssetsIndex, err := getThemes(pm.datafolder)
+	if err != nil {
+		return erro.Wrap(err)
+	}
+	pm.themesMutex.Lock()
+	pm.themes, pm.fallbackAssetsIndex = themes, fallbackAssetsIndex
+	pm.themesMutex.Unlock()
+	return nil
+}
+
 func (t *theme) Unmarshal(data interface{}) {
 	data2, ok := data.(map[string]interface{})
 	if !ok {

@@ -38,6 +38,7 @@ func (data *createPageData) formCallback(form *hyforms.Form) {
 		RedirectGroupID = "redirect-group"
 		DisabledGroupID = "disabled-group"
 	)
+	form.Set("#pm-create-page", hy.Attr{"method": "POST"})
 	var urlValue string
 	if hyforms.Validate(data.URL, hyforms.IsRelativeURL) == nil {
 		urlValue = data.URL
@@ -74,9 +75,9 @@ func (data *createPageData) formCallback(form *hyforms.Form) {
 				for j, templateName := range data.Templates[i] {
 					opts.Append(hyforms.Option{Value: templateName, Display: templateName, Selected: j == 0})
 				}
-				els.Append("div[hidden]", hy.Attr{"id": name}, form.Select(name, opts).Set(".pointer", hy.Attr{"size": "5"}))
+				els.Append("div", hy.Attr{"id": name}, form.Select(name, opts).Set(".pointer", hy.Attr{"size": "5"}))
 			} else {
-				els.Append("div[hidden]", hy.Attr{"id": name}, form.Select(name, hyforms.Options{{Display: "<empty>"}}))
+				els.Append("div", hy.Attr{"id": name}, form.Select(name, hyforms.Options{{Display: "<empty>"}}))
 			}
 		}
 		return els
@@ -87,7 +88,6 @@ func (data *createPageData) formCallback(form *hyforms.Form) {
 	redirectURL := form.Text("pm-redirect-url", data.RedirectURL).Set("#pm-redirect-url", nil)
 	disabled := form.Checkbox("pm-disabled", "", data.Disabled).Set("#pm-disabled.pointer.dib", nil)
 
-	form.Set("#pm-create-page", hy.Attr{"method": "POST"})
 	form.AppendElements(
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": pageURL.ID()}, hy.Txt("URL: "))),
 		hy.H("div", nil, pageURL),
@@ -101,36 +101,37 @@ func (data *createPageData) formCallback(form *hyforms.Form) {
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": pageType.ID()}, hy.Txt("Page Type: "))),
 		hy.H("div", nil, pageType),
 	)
-	form.Append("div[hidden]", hy.Attr{"id": TemplateGroupID},
+	form.Append("div", hy.Attr{"id": TemplateGroupID},
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": themePath.ID()}, hy.Txt("Theme Path: "))),
 		hy.H("div", nil, themePath),
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{}, hy.Txt("Template Name: "))),
 		templateNames,
 	)
-	form.Append("div[hidden]", hy.Attr{"id": PluginGroupID},
+	form.Append("div", hy.Attr{"id": PluginGroupID},
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": pluginName.ID()}, hy.Txt("Plugin Name: "))),
 		hy.H("div", nil, pluginName),
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": handlerName.ID()}, hy.Txt("Handler Name: "))),
 		hy.H("div", nil, handlerName),
 	)
-	form.Append("div[hidden]", hy.Attr{"id": ContentGroupID},
+	form.Append("div", hy.Attr{"id": ContentGroupID},
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": content.ID()}, hy.Txt("Content: "))),
 		hy.H("div", nil, content),
 	)
-	form.Append("div[hidden]", hy.Attr{"id": RedirectGroupID},
+	form.Append("div", hy.Attr{"id": RedirectGroupID},
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": redirectURL.ID()}, hy.Txt("Redirect URL: "))),
 		hy.H("div", nil, redirectURL),
 	)
-	form.Append("div[hidden]", hy.Attr{"id": DisabledGroupID},
+	form.Append("div", hy.Attr{"id": DisabledGroupID},
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": disabled.ID()}, hy.Txt("Disabled: "), disabled)),
 	)
 	form.Append("div.mt3", nil, hy.H("button.pointer.pa2.bg-white", hy.Attr{"type": "submit"}, hy.Txt("Create Page")))
 
 	form.Unmarshal(func() {
+		data.Valid = true
 		data.URL = pageURL.Value()
 		data.PageType = pageType.Value()
 		data.ThemePath = themePath.Value()
-		// data.TemplateName = form.Request().FormValue(templateSelectName)
+		data.TemplateName = form.Request().FormValue("pm-templatefor-" + data.ThemePath)
 		data.PluginName = pluginName.Value()
 		data.HandlerName = handlerName.Value()
 		data.Content = content.Value()
@@ -180,8 +181,13 @@ func (pm *PageManager) createPage(w http.ResponseWriter, r *http.Request) {
 			PAGES := tables.NEW_PAGES(r.Context(), "p")
 			data.URLExists, _ = sq.Exists(pm.dataDB, sq.SQLite.From(PAGES).Where(PAGES.URL.EqString(data.URL)))
 		}
+		err := pm.refreshThemes()
+		if err != nil {
+			pm.InternalServerError(w, r, erro.Wrap(err))
+			return
+		}
 		data.processThemes(pm.themes)
-		err := pm.tpl.Render(w, r, data, tpl.Files("create_page.html"))
+		err = pm.tpl.Render(w, r, data, tpl.Files("create_page.html"))
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return
@@ -189,10 +195,10 @@ func (pm *PageManager) createPage(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		errMsgs, ok := hyforms.UnmarshalForm(w, r, data.formCallback)
 		if !ok {
-			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
+			hyforms.Redirect(w, r, LocaleURL(r, r.URL.Path), errMsgs)
 			return
 		}
-		Redirect(w, r, URLViewPage)
+		Redirect(w, r, r.URL.Path)
 	default:
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 	}
