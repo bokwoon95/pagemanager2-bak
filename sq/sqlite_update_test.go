@@ -120,7 +120,7 @@ func TestUpdateQuery_ToSQL(t *testing.T) {
 		cte1 := SQLite.Select(u.USER_ID, u.AGE).From(u).Where(u.USER_ID.EqInt(3)).CTE("cte1")
 		cte2 := SQLite.Select(u.USER_ID.As("uid2"), u.AGE).From(u).Where(u.AGE.EqInt(5)).CTE("cte2")
 		cte3 := SQLite.Select(u.NAME).From(u).Where(u.NAME.LikeString("bob%")).CTE("cte3")
-		q := SQLite.WithUpdate(cte1, cte2, cte3).
+		q := SQLite.UpdateWith(cte1, cte2, cte3).
 			Update(u).
 			Set(u.USER_ID.SetInt(1)).
 			From(cte1).Join(cte2, cte2["uid2"].Eq(cte1["user_id"])).

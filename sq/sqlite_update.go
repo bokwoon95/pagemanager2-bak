@@ -132,7 +132,7 @@ func (q SQLiteUpdateQuery) GetFetchableFields() ([]Field, error) {
 
 func (q SQLiteUpdateQuery) Dialect() string { return "sqlite3" }
 
-func (_ SQLiteDialect) WithUpdate(ctes ...CTE) SQLiteUpdateQuery {
+func (_ SQLiteDialect) UpdateWith(ctes ...CTE) SQLiteUpdateQuery {
 	return SQLiteUpdateQuery{CTEs: ctes}
 }
 

@@ -156,7 +156,7 @@ func (q SQLiteInsertQuery) GetFetchableFields() ([]Field, error) {
 
 func (q SQLiteInsertQuery) Dialect() string { return "sqlite3" }
 
-func (_ SQLiteDialect) WithInsert(ctes ...CTE) SQLiteInsertQuery {
+func (_ SQLiteDialect) InsertWith(ctes ...CTE) SQLiteInsertQuery {
 	return SQLiteInsertQuery{CTEs: ctes}
 }
 

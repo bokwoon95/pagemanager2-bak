@@ -106,7 +106,7 @@ func (q SQLiteDeleteQuery) GetFetchableFields() ([]Field, error) {
 
 func (q SQLiteDeleteQuery) Dialect() string { return "sqlite3" }
 
-func (_ SQLiteDialect) WithDelete(ctes ...CTE) SQLiteDeleteQuery {
+func (_ SQLiteDialect) DeleteWith(ctes ...CTE) SQLiteDeleteQuery {
 	return SQLiteDeleteQuery{CTEs: ctes}
 }
 

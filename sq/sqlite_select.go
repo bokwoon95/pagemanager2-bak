@@ -180,7 +180,7 @@ func (_ SQLiteDialect) Select(fields ...Field) SQLiteSelectQuery {
 	return SQLiteSelectQuery{SelectFields: fields}
 }
 
-func (_ SQLiteDialect) WithSelect(ctes ...CTE) SQLiteSelectQuery {
+func (_ SQLiteDialect) SelectWith(ctes ...CTE) SQLiteSelectQuery {
 	return SQLiteSelectQuery{CTEs: ctes}
 }
 

@@ -137,7 +137,7 @@ func TestInsertQuery_ToSQL(t *testing.T) {
 		cte1 := SQLite.Select(u.USER_ID, u.AGE).From(u).Where(u.USER_ID.EqInt(3)).CTE("cte1")
 		cte2 := SQLite.Select(u.USER_ID.As("uid2"), u.AGE).From(u).Where(u.AGE.EqInt(5)).CTE("cte2")
 		cte3 := SQLite.Select(u.NAME).From(u).Where(u.NAME.LikeString("bob%")).CTE("cte3")
-		q := SQLite.WithInsert(cte1, cte2, cte3).
+		q := SQLite.InsertWith(cte1, cte2, cte3).
 			InsertInto(u).
 			Columns(u.USER_ID, u.AGE).
 			Select(SQLite.Select(cte1["user_id"], cte1["age"]).From(cte1))
