@@ -2,6 +2,7 @@
 package hy
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"reflect"
@@ -21,7 +22,7 @@ const (
 	Disabled = "\x01"
 )
 
-type Element interface{ AppendHTML(*strings.Builder) error }
+type Element interface{ AppendHTML(*bytes.Buffer) error }
 
 type Sanitizer interface{ Sanitize(string) string }
 
@@ -31,15 +32,24 @@ var singletonElements = map[string]struct{}{
 	"LINK": {}, "META": {}, "PARAM": {}, "SOURCE": {}, "TRACK": {}, "WBR": {},
 }
 
-var bufpool = sync.Pool{New: func() interface{} { return &strings.Builder{} }}
+var bufpool = sync.Pool{New: func() interface{} { return &bytes.Buffer{} }}
+
+var defaultTags = []string{
+	"form", "input", "button", "label", "select", "option", "optgroup", "pre", "a", "fieldset", "legend", "textarea",
+}
 
 var (
-	defaultSanitizer = NewSanitizer()
-	unsafeSanitizer  = NewSanitizer("script", "link")
+	defaultSanitizer = NewSanitizer(defaultTags...)
+	unsafeSanitizer  = NewSanitizer(append([]string{"script", "link"}, defaultTags...)...)
 )
 
 func DefaultSanitizer() Sanitizer { return defaultSanitizer }
 func UnsafeSanitizer() Sanitizer  { return unsafeSanitizer }
+func NoopSanitizer() Sanitizer    { return noopSanitizer{} }
+
+type noopSanitizer struct{}
+
+func (n noopSanitizer) Sanitize(s string) string { return s }
 
 // attributesMap is the list of attributes that we allow for each tag.
 // Attributes were referenced from MDN docs, so should be comprehensive.
@@ -103,7 +113,7 @@ func (el HTMLElement) Tag() string { return el.attrs.Tag }
 
 func (el HTMLElement) ID() string { return el.attrs.ID }
 
-func (el HTMLElement) AppendHTML(buf *strings.Builder) error {
+func (el HTMLElement) AppendHTML(buf *bytes.Buffer) error {
 	err := AppendHTML(buf, el.attrs, el.children)
 	if err != nil {
 		return err
@@ -124,7 +134,7 @@ func UnsafeTxt(a ...interface{}) Element {
 	return textValue{values: a, unsafe: true}
 }
 
-func (txt textValue) AppendHTML(buf *strings.Builder) error {
+func (txt textValue) AppendHTML(buf *bytes.Buffer) error {
 	for i, value := range txt.values {
 		switch value := value.(type) {
 		case string:
@@ -164,7 +174,7 @@ func (l *Elements) AppendElements(children ...Element) {
 	*l = append(*l, children...)
 }
 
-func (l Elements) AppendHTML(buf *strings.Builder) error {
+func (l Elements) AppendHTML(buf *bytes.Buffer) error {
 	var err error
 	for _, el := range l {
 		err = el.AppendHTML(buf)
@@ -312,17 +322,16 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 	return attrs
 }
 
-func AppendHTML(buf *strings.Builder, attrs Attributes, children []Element) error {
+func AppendHTML(buf *bytes.Buffer, attrs Attributes, children []Element) error {
 	var err error
 	if attrs.ParseErr != nil {
 		return attrs.ParseErr
 	}
-	if attrs.Tag != "" {
-		buf.WriteString(`<`)
-		template.HTMLEscape(buf, []byte(attrs.Tag))
-	} else {
-		buf.WriteString(`<div`)
+	if attrs.Tag == "" {
+		attrs.Tag = "div"
 	}
+	buf.WriteString(`<`)
+	template.HTMLEscape(buf, []byte(attrs.Tag))
 	AppendAttributes(buf, attrs)
 	buf.WriteString(`>`)
 	if _, ok := singletonElements[strings.ToUpper(attrs.Tag)]; !ok {
@@ -339,7 +348,7 @@ func AppendHTML(buf *strings.Builder, attrs Attributes, children []Element) erro
 	return nil
 }
 
-func AppendAttributes(buf *strings.Builder, attrs Attributes) {
+func AppendAttributes(buf *bytes.Buffer, attrs Attributes) {
 	if attrs.ID != "" {
 		buf.WriteString(` id="`)
 		template.HTMLEscape(buf, []byte(attrs.ID))
@@ -381,7 +390,7 @@ func AppendAttributes(buf *strings.Builder, attrs Attributes) {
 }
 
 func Marshal(s Sanitizer, el Element) (template.HTML, error) {
-	buf := bufpool.Get().(*strings.Builder)
+	buf := bufpool.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
 		bufpool.Put(buf)
@@ -455,9 +464,6 @@ func Stringify(v interface{}) string {
 }
 
 func NewSanitizer(allowedTags ...string) Sanitizer {
-	defaultSanitizerTags := []string{
-		"form", "input", "button", "label", "select", "option", "optgroup", "pre", "a", "fieldset", "legend", "textarea",
-	}
 	p := bluemonday.UGCPolicy()
 	p.AllowStyling()
 	p.AllowImages()
@@ -465,9 +471,6 @@ func NewSanitizer(allowedTags ...string) Sanitizer {
 	p.AllowTables()
 	p.AllowAttrs("inputmode", "hidden").Globally()
 	defer p.RequireNoFollowOnLinks(false) // deferred til the last because bluemonday looooves to turn it back on
-	for _, tag := range defaultSanitizerTags {
-		p.AllowAttrs(attributesMap[tag]...).OnElements(tag)
-	}
 	for _, tag := range allowedTags {
 		p.AllowAttrs(attributesMap[tag]...).OnElements(tag)
 	}
