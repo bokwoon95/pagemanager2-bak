@@ -79,6 +79,13 @@ func Test_XSS(t *testing.T) {
 		is.NoErr(err)
 		fmt.Println(out)
 	})
+	t.Run("basic", func(t *testing.T) {
+		is := testutil.New(t)
+		div := H("div", nil, Txt("<script>alert('xss')</script>"))
+		out, err := Marshal(NoopSanitizer(), div)
+		is.NoErr(err)
+		fmt.Println(out)
+	})
 }
 
 type tableRows []struct {
