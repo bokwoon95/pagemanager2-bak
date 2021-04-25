@@ -1,7 +1,7 @@
 package sq
 
 import (
-	"strings"
+	"bytes"
 	"testing"
 
 	"github.com/bokwoon95/pagemanager/testutil"
@@ -17,7 +17,7 @@ func Test_PredicateCases(t *testing.T) {
 	assertField := func(t *testing.T, f PredicateCases, tt TT) {
 		is := testutil.New(t)
 		var _ Field = f
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		err := f.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
 		is.NoErr(err)
@@ -28,7 +28,7 @@ func Test_PredicateCases(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		is := testutil.New(t)
 		f := PredicateCases{}
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		err := f.AppendSQLExclude("", buf, &args, make(map[string]int), nil)
 		is.True(err != nil)
@@ -69,7 +69,7 @@ func Test_SimpleCases(t *testing.T) {
 	assertField := func(t *testing.T, f SimpleCases, tt TT) {
 		is := testutil.New(t)
 		var _ Field = f
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		err := f.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
 		is.NoErr(err)
@@ -80,7 +80,7 @@ func Test_SimpleCases(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		is := testutil.New(t)
 		f := SimpleCases{}
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		err := f.AppendSQLExclude("", buf, &args, make(map[string]int), nil)
 		is.True(err != nil)
@@ -89,7 +89,7 @@ func Test_SimpleCases(t *testing.T) {
 		is := testutil.New(t)
 		u := NEW_USERS("u")
 		f := Case(u.USER_ID)
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		err := f.AppendSQLExclude("", buf, &args, make(map[string]int), nil)
 		is.True(err != nil)

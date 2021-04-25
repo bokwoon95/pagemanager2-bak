@@ -1,8 +1,6 @@
 package sq
 
-import (
-	"strings"
-)
+import "bytes"
 
 type SQLiteInsertQuery struct {
 	ColumnMapper func(*Column) error
@@ -25,7 +23,7 @@ type SQLiteInsertQuery struct {
 
 type SQLiteInsertConflict struct{ insertQuery *SQLiteInsertQuery }
 
-func (q SQLiteInsertQuery) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+func (q SQLiteInsertQuery) AppendSQL(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int) error {
 	var err error
 	var excludedTableQualifiers []string
 	if q.ColumnMapper != nil {
@@ -132,7 +130,7 @@ func (q SQLiteInsertQuery) AppendSQL(dialect string, buf *strings.Builder, args 
 }
 
 func (q SQLiteInsertQuery) ToSQL() (query string, args []interface{}, params map[string]int, err error) {
-	buf := bufpool.Get().(*strings.Builder)
+	buf := bufpool.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
 		bufpool.Put(buf)

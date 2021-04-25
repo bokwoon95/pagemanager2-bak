@@ -1,8 +1,6 @@
 package sq
 
-import (
-	"strings"
-)
+import "bytes"
 
 type SQLiteSelectQuery struct {
 	// WITH
@@ -31,7 +29,7 @@ type SQLiteSelectQuery struct {
 	OffsetValue int64
 }
 
-func (q SQLiteSelectQuery) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+func (q SQLiteSelectQuery) AppendSQL(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int) error {
 	var err error
 	// WITH
 	if len(q.CTEs) > 0 {
@@ -147,7 +145,7 @@ func (q SQLiteSelectQuery) AppendSQL(dialect string, buf *strings.Builder, args 
 }
 
 func (q SQLiteSelectQuery) ToSQL() (query string, args []interface{}, params map[string]int, err error) {
-	buf := bufpool.Get().(*strings.Builder)
+	buf := bufpool.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
 		bufpool.Put(buf)

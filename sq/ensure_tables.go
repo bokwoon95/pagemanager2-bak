@@ -1,6 +1,7 @@
 package sq
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"net/url"
@@ -269,7 +270,7 @@ type hcolumn struct {
 }
 
 func (t htable) ddl() string {
-	buf := &strings.Builder{}
+	buf := &bytes.Buffer{}
 	buf.WriteString("CREATE TABLE ")
 	buf.WriteString(t.name)
 	buf.WriteString(" (")

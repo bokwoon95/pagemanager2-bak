@@ -1,8 +1,8 @@
 package sq
 
 import (
+	"bytes"
 	"fmt"
-	"strings"
 )
 
 type PredicateCase struct {
@@ -20,7 +20,7 @@ func (f PredicateCases) GetAlias() string { return f.alias }
 
 func (f PredicateCases) GetName() string { return "" }
 
-func (f PredicateCases) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
+func (f PredicateCases) AppendSQLExclude(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
 	buf.WriteString("CASE")
 	var err error
 	for _, Case := range f.cases {
@@ -92,7 +92,7 @@ func (f SimpleCases) GetAlias() string { return f.alias }
 
 func (f SimpleCases) GetName() string { return "" }
 
-func (f SimpleCases) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
+func (f SimpleCases) AppendSQLExclude(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
 	buf.WriteString("CASE ")
 	err := appendSQLValue(buf, args, params, excludedTableQualifiers, f.expression)
 	if err != nil {

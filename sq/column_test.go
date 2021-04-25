@@ -1,7 +1,7 @@
 package sq
 
 import (
-	"strings"
+	"bytes"
 	"testing"
 	"time"
 
@@ -73,7 +73,7 @@ func TestColumnUpdate(t *testing.T) {
 	col.SetInt64(a.APPLICATION_ID, 1)
 	col.SetString(a.TEAM_NAME, "lorem ipsum")
 	col.SetTime(a.CREATED_AT, now)
-	buf1, buf2 := &strings.Builder{}, &strings.Builder{}
+	buf1, buf2 := &bytes.Buffer{}, &bytes.Buffer{}
 	var args1, args2 []interface{}
 	_ = Assignments{
 		a.SUBMITTED.SetBool(true),

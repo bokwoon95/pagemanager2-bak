@@ -1,11 +1,11 @@
 package sq
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"runtime"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/lib/pq"
@@ -182,7 +182,7 @@ func (r *Row) BoolValid(predicate Predicate) bool {
 // NullBool returns the sql.NullBool value of the Predicate.
 func (r *Row) NullBool(predicate Predicate) sql.NullBool {
 	if r.rows == nil {
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		predicate.AppendSQLExclude("", buf, &args, nil, nil)
 		r.fields = append(r.fields, Predicatef(buf.String(), args...))

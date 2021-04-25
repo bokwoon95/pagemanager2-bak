@@ -1,7 +1,7 @@
 package sq
 
 import (
-	"strings"
+	"bytes"
 	"testing"
 
 	"github.com/bokwoon95/pagemanager/testutil"
@@ -17,7 +17,7 @@ func Test_BooleanField(t *testing.T) {
 	var _ Field = BooleanField{}
 	assertField := func(t *testing.T, f BooleanField, tt TT) {
 		is := testutil.New(t)
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		err := f.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
 		is.NoErr(err)
@@ -61,7 +61,7 @@ func Test_BooleanField(t *testing.T) {
 
 	assertPredicate := func(t *testing.T, p Predicate, tt TT) {
 		is := testutil.New(t)
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		err := p.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
 		is.NoErr(err)
@@ -96,7 +96,7 @@ func Test_BooleanField(t *testing.T) {
 
 	assertAssignment := func(t *testing.T, a Assignment, tt TT) {
 		is := testutil.New(t)
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		err := a.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
 		is.NoErr(err)

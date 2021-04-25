@@ -1,8 +1,6 @@
 package sq
 
-import (
-	"strings"
-)
+import "bytes"
 
 func (f BooleanField) Not() Predicate {
 	f.negative = !f.negative
@@ -35,7 +33,7 @@ func (f BooleanField) NullsFirst() BooleanField { f.field.nullsFirst(); return f
 
 func (f BooleanField) NullsLast() BooleanField { f.field.nullsLast(); return f }
 
-func (f BooleanField) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
+func (f BooleanField) AppendSQLExclude(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
 	if f.negative {
 		buf.WriteString("NOT ")
 	}
@@ -43,7 +41,7 @@ func (f BooleanField) AppendSQLExclude(dialect string, buf *strings.Builder, arg
 }
 
 func (f BooleanField) String() string {
-	buf := bufpool.Get().(*strings.Builder)
+	buf := bufpool.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
 		bufpool.Put(buf)

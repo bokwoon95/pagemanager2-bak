@@ -1,6 +1,6 @@
 package sq
 
-import "strings"
+import "bytes"
 
 type Window struct {
 	WindowName        string
@@ -10,7 +10,7 @@ type Window struct {
 	FrameDefinition   string
 }
 
-func (w Window) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+func (w Window) AppendSQL(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int) error {
 	if w.RenderName {
 		buf.WriteString(w.WindowName)
 		return nil
@@ -78,7 +78,7 @@ func (w Window) Frame(frameDefinition string) Window {
 
 type Windows []Window
 
-func (ws Windows) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+func (ws Windows) AppendSQL(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int) error {
 	for i, window := range ws {
 		if i > 0 {
 			buf.WriteString(", ")

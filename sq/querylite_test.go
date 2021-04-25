@@ -1,6 +1,6 @@
 package sq
 
-import "strings"
+import "bytes"
 
 type querylite struct {
 	fields     Fields
@@ -21,7 +21,7 @@ func fieldliterals(fields ...string) []Field {
 	return fs
 }
 
-func (q querylite) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+func (q querylite) AppendSQL(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int) error {
 	var err error
 	if q.readQuery != "" {
 		if len(q.fields) > 0 {
@@ -60,7 +60,7 @@ func (q querylite) AppendSQL(dialect string, buf *strings.Builder, args *[]inter
 	return nil
 }
 func (q querylite) ToSQL() (query string, args []interface{}, params map[string]int, err error) {
-	buf := &strings.Builder{}
+	buf := &bytes.Buffer{}
 	params = make(map[string]int)
 	err = q.AppendSQL("", buf, &args, params)
 	if err != nil {

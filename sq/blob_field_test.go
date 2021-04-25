@@ -1,7 +1,7 @@
 package sq
 
 import (
-	"strings"
+	"bytes"
 	"testing"
 
 	"github.com/bokwoon95/pagemanager/testutil"
@@ -17,7 +17,7 @@ func Test_BlobField(t *testing.T) {
 	assertField := func(t *testing.T, f BlobField, tt TT) {
 		is := testutil.New(t)
 		var _ Field = f
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		err := f.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
 		is.NoErr(err)
@@ -61,7 +61,7 @@ func Test_BlobField(t *testing.T) {
 
 	assertAssignment := func(t *testing.T, a Assignment, tt TT) {
 		is := testutil.New(t)
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		err := a.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
 		is.NoErr(err)

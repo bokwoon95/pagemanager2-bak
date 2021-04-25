@@ -1,6 +1,7 @@
 package sq
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -8,7 +9,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -97,7 +97,7 @@ func (lg logger) LogQueryStats(ctx context.Context, stats QueryStats) {
 		return
 	default:
 	}
-	buf := bufpool.Get().(*strings.Builder)
+	buf := bufpool.Get().(*bytes.Buffer)
 	defer func() {
 		if buf.Len() > 0 {
 			lg.Printf(buf.String())

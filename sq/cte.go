@@ -1,6 +1,9 @@
 package sq
 
-import "strings"
+import (
+	"bytes"
+	"strings"
+)
 
 // https://www.topster.net/text/utf-schriften.html serif italics
 const (
@@ -50,14 +53,14 @@ func (cte CTE) GetAlias() string {
 	return ""
 }
 
-func (cte CTE) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+func (cte CTE) AppendSQL(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int) error {
 	buf.WriteString(cte.GetName())
 	return nil
 }
 
 type CTEs []CTE
 
-func (ctes CTEs) AppendCTEs(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, fromTable Table, joinTables []JoinTable) error {
+func (ctes CTEs) AppendCTEs(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int, fromTable Table, joinTables []JoinTable) error {
 	type TmpCTE struct {
 		name    string
 		columns []string

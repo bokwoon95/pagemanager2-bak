@@ -1,10 +1,10 @@
 package sq
 
-import "strings"
+import "bytes"
 
 type RowValue []interface{}
 
-func (r RowValue) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
+func (r RowValue) AppendSQLExclude(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
 	buf.WriteString("(")
 	var err error
 	for i, value := range r {
@@ -23,7 +23,7 @@ func (r RowValue) AppendSQLExclude(dialect string, buf *strings.Builder, args *[
 func (r RowValue) GetName() string  { return "" }
 func (r RowValue) GetAlias() string { return "" }
 
-func (r RowValue) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+func (r RowValue) AppendSQL(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int) error {
 	return r.AppendSQLExclude(dialect, buf, args, params, nil)
 }
 
@@ -36,7 +36,7 @@ func (r RowValue) In(v interface{}) CustomPredicate {
 
 type RowValues []RowValue
 
-func (rs RowValues) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+func (rs RowValues) AppendSQL(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int) error {
 	var err error
 	for i, rowvalue := range rs {
 		if i > 0 {

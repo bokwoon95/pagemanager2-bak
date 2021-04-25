@@ -1,7 +1,7 @@
 package sq
 
 import (
-	"strings"
+	"bytes"
 	"testing"
 
 	"github.com/bokwoon95/pagemanager/testutil"
@@ -18,7 +18,7 @@ func Test_CTE(t *testing.T) {
 
 	assertCTE := func(t *testing.T, tt TT) {
 		is := testutil.New(t)
-		buf1, buf2 := &strings.Builder{}, &strings.Builder{}
+		buf1, buf2 := &bytes.Buffer{}, &bytes.Buffer{}
 		var args1, args2 []interface{}
 
 		// cte1 "fields"
@@ -106,7 +106,7 @@ func Test_CTEs(t *testing.T) {
 
 	assertCTEs := func(t *testing.T, tt TT) {
 		is := testutil.New(t)
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		_ = tt.ctes.AppendCTEs("", buf, &args, make(map[string]int), tt.fromTable, tt.joinTables)
 		is.Equal(tt.wantQuery, buf.String())

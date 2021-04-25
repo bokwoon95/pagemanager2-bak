@@ -1,7 +1,7 @@
 package sq
 
 import (
-	"strings"
+	"bytes"
 	"testing"
 
 	"github.com/bokwoon95/pagemanager/testutil"
@@ -10,7 +10,7 @@ import (
 func Test_Assignment(t *testing.T) {
 	assert := func(t *testing.T, a Assignment, wantQuery string, wantArgs []interface{}) {
 		is := testutil.New(t)
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		err := a.AppendSQLExclude("", buf, &args, make(map[string]int), nil)
 		is.NoErr(err)
@@ -37,7 +37,7 @@ func Test_Assignment(t *testing.T) {
 func Test_Assignments(t *testing.T) {
 	assert := func(t *testing.T, as Assignments, wantQuery string, wantArgs []interface{}) {
 		is := testutil.New(t)
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		err := as.AppendSQLExclude("", buf, &args, make(map[string]int), nil)
 		is.NoErr(err)

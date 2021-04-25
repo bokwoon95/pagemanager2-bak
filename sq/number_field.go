@@ -1,6 +1,6 @@
 package sq
 
-import "strings"
+import "bytes"
 
 type NumberField struct {
 	field
@@ -30,7 +30,7 @@ func (f NumberField) Desc() NumberField       { f.field.desc(); return f }
 func (f NumberField) NullsFirst() NumberField { f.field.nullsFirst(); return f }
 func (f NumberField) NullsLast() NumberField  { f.field.nullsLast(); return f }
 
-func (f NumberField) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
+func (f NumberField) AppendSQLExclude(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
 	if f.format != "" {
 		_ = expandValues(buf, args, params, excludedTableQualifiers, f.format, f.values)
 	}
@@ -38,7 +38,7 @@ func (f NumberField) AppendSQLExclude(dialect string, buf *strings.Builder, args
 }
 
 func (f NumberField) String() string {
-	buf := bufpool.Get().(*strings.Builder)
+	buf := bufpool.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
 		bufpool.Put(buf)

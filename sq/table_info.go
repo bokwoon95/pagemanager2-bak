@@ -1,6 +1,6 @@
 package sq
 
-import "strings"
+import "bytes"
 
 type TableInfo struct {
 	Schema string
@@ -8,7 +8,7 @@ type TableInfo struct {
 	Alias  string
 }
 
-func (tbl TableInfo) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+func (tbl TableInfo) AppendSQL(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int) error {
 	if tbl.Schema != "" {
 		buf.WriteString(tbl.Schema)
 		buf.WriteString(".")

@@ -1,8 +1,6 @@
 package sq
 
-import (
-	"strings"
-)
+import "bytes"
 
 type Assignment struct {
 	LHS interface{}
@@ -13,7 +11,7 @@ func Assign(LHS, RHS interface{}) Assignment {
 	return Assignment{LHS: LHS, RHS: RHS}
 }
 
-func (a Assignment) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
+func (a Assignment) AppendSQLExclude(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
 	err := appendSQLValue(buf, args, params, excludedTableQualifiers, a.LHS)
 	if err != nil {
 		return err
@@ -38,7 +36,7 @@ func (a Assignment) AppendSQLExclude(dialect string, buf *strings.Builder, args 
 
 type Assignments []Assignment
 
-func (as Assignments) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
+func (as Assignments) AppendSQLExclude(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
 	var err error
 	for i, a := range as {
 		if i > 0 {

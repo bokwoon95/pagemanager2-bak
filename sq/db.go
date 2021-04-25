@@ -1,13 +1,13 @@
 package sq
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -125,9 +125,9 @@ func fetchContext(ctx context.Context, db Queryer, q Query, rowmapper func(*Row)
 	if err != nil {
 		return 0, err
 	}
-	buf := bufpool.Get().(*strings.Builder)
-	resultsBuf := bufpool.Get().(*strings.Builder)
-	tmpbuf := bufpool.Get().(*strings.Builder)
+	buf := bufpool.Get().(*bytes.Buffer)
+	resultsBuf := bufpool.Get().(*bytes.Buffer)
+	tmpbuf := bufpool.Get().(*bytes.Buffer)
 	tmpargs := argspool.Get().([]interface{})
 	defer func() {
 		if resultsBuf.Len() > 0 {
@@ -208,8 +208,8 @@ func fetchContext(ctx context.Context, db Queryer, q Query, rowmapper func(*Row)
 }
 
 func wrapScanError(err error, row *Row) error {
-	buf := bufpool.Get().(*strings.Builder)
-	tmpbuf := bufpool.Get().(*strings.Builder)
+	buf := bufpool.Get().(*bytes.Buffer)
+	tmpbuf := bufpool.Get().(*bytes.Buffer)
 	tmpargs := argspool.Get().([]interface{})
 	defer func() {
 		buf.Reset()
@@ -279,7 +279,7 @@ func execContext(ctx context.Context, db Queryer, q Query, execFlag ExecFlag, sk
 		stats.LastInsertID = lastInsertID
 		logger.LogQueryStats(ctx, stats)
 	}()
-	buf := bufpool.Get().(*strings.Builder)
+	buf := bufpool.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
 		bufpool.Put(buf)
@@ -354,7 +354,7 @@ func existsContext(ctx context.Context, db Queryer, q Query, skip int) (exists b
 		}
 		logger.LogQueryStats(ctx, stats)
 	}()
-	buf := bufpool.Get().(*strings.Builder)
+	buf := bufpool.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
 		bufpool.Put(buf)

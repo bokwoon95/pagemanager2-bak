@@ -2,10 +2,10 @@
 package sq
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
 	"sync"
 )
 
@@ -13,7 +13,7 @@ var ErrUnsupported = errors.New("unsupported operation")
 var SkipRows = errors.New("skip subsequent rows")
 
 type Table interface {
-	AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error
+	AppendSQL(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int) error
 	GetAlias() string
 	GetName() string // Table name must exclude the schema (if any)
 }
@@ -35,7 +35,7 @@ type BaseTable interface {
 }
 
 type Query interface {
-	AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error
+	AppendSQL(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int) error
 	ToSQL() (query string, args []interface{}, params map[string]int, err error)
 	SetFetchableFields([]Field) (Query, error)
 	GetFetchableFields() ([]Field, error)
@@ -51,7 +51,7 @@ type Field interface {
 	//
 	// This is to play nice with certain clauses in the INSERT and UPDATE
 	// queries that expressly forbid table qualified columns.
-	AppendSQLExclude(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error
+	AppendSQLExclude(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error
 	GetAlias() string
 	GetName() string // Field name must exclude the table name
 }
@@ -73,7 +73,7 @@ func Param(name string, value interface{}) Field {
 }
 func (param namedparam) GetAlias() string { return "" }
 func (param namedparam) GetName() string  { return "" }
-func (param namedparam) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
+func (param namedparam) AppendSQLExclude(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
 	buf.WriteString("?")
 	*args = append(*args, param.value)
 	params[param.name] = len(*args) - 1
@@ -83,7 +83,7 @@ func (param namedparam) AppendSQLExclude(dialect string, buf *strings.Builder, a
 var _ Field = namedparam{}
 
 var bufpool = sync.Pool{
-	New: func() interface{} { return new(strings.Builder) },
+	New: func() interface{} { return new(bytes.Buffer) },
 }
 
 var argspool = sync.Pool{

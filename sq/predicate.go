@@ -1,6 +1,6 @@
 package sq
 
-import "strings"
+import "bytes"
 
 func Not(predicate Predicate) Predicate {
 	return predicate.Not()
@@ -30,7 +30,7 @@ func (p CustomPredicate) GetName() string {
 	return ""
 }
 
-func (p CustomPredicate) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
+func (p CustomPredicate) AppendSQLExclude(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
 	if p.negative {
 		buf.WriteString("NOT ")
 	}
@@ -39,7 +39,7 @@ func (p CustomPredicate) AppendSQLExclude(dialect string, buf *strings.Builder, 
 }
 
 func (p CustomPredicate) String() string {
-	buf := bufpool.Get().(*strings.Builder)
+	buf := bufpool.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
 		bufpool.Put(buf)
@@ -70,7 +70,7 @@ type VariadicPredicate struct {
 	Negative   bool
 }
 
-func (p VariadicPredicate) AppendSQLExclude(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
+func (p VariadicPredicate) AppendSQLExclude(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int, excludedTableQualifiers []string) error {
 	if p.Operator == "" {
 		p.Operator = PredicateAnd
 	}

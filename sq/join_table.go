@@ -1,6 +1,6 @@
 package sq
 
-import "strings"
+import "bytes"
 
 type JoinType string
 
@@ -67,7 +67,7 @@ func CustomJoin(joinType JoinType, table Table, predicates ...Predicate) JoinTab
 	}
 }
 
-func (join JoinTable) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+func (join JoinTable) AppendSQL(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int) error {
 	if join.JoinType == "" {
 		join.JoinType = JoinTypeInner
 	}
@@ -109,7 +109,7 @@ func (join JoinTable) AppendSQL(dialect string, buf *strings.Builder, args *[]in
 
 type JoinTables []JoinTable
 
-func (joins JoinTables) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+func (joins JoinTables) AppendSQL(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int) error {
 	var err error
 	for i, join := range joins {
 		if i > 0 {

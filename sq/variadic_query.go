@@ -1,8 +1,6 @@
 package sq
 
-import (
-	"strings"
-)
+import "bytes"
 
 type VariadicQueryOperator string
 
@@ -22,7 +20,7 @@ type VariadicQuery struct {
 }
 
 func (vq VariadicQuery) ToSQL() (query string, args []interface{}, params map[string]int, err error) {
-	buf := bufpool.Get().(*strings.Builder)
+	buf := bufpool.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
 		bufpool.Put(buf)
@@ -35,7 +33,7 @@ func (vq VariadicQuery) ToSQL() (query string, args []interface{}, params map[st
 	return buf.String(), args, params, nil
 }
 
-func (vq VariadicQuery) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+func (vq VariadicQuery) AppendSQL(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int) error {
 	var err error
 	if vq.Operator == "" {
 		vq.Operator = QueryUnion

@@ -1,8 +1,6 @@
 package sq
 
-import (
-	"strings"
-)
+import "bytes"
 
 type SQLiteDeleteQuery struct {
 	// WITH
@@ -21,7 +19,7 @@ type SQLiteDeleteQuery struct {
 	OffsetValue int64
 }
 
-func (q SQLiteDeleteQuery) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+func (q SQLiteDeleteQuery) AppendSQL(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int) error {
 	var err error
 	// WITH
 	if len(q.CTEs) > 0 {
@@ -82,7 +80,7 @@ func (q SQLiteDeleteQuery) AppendSQL(dialect string, buf *strings.Builder, args 
 }
 
 func (q SQLiteDeleteQuery) ToSQL() (query string, args []interface{}, params map[string]int, err error) {
-	buf := bufpool.Get().(*strings.Builder)
+	buf := bufpool.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
 		bufpool.Put(buf)

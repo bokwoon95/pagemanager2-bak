@@ -1,8 +1,6 @@
 package sq
 
-import (
-	"strings"
-)
+import "bytes"
 
 type PostgresSelectQuery struct {
 	Alias string
@@ -35,7 +33,7 @@ type PostgresSelectQuery struct {
 	OffsetValue int64
 }
 
-func (q PostgresSelectQuery) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+func (q PostgresSelectQuery) AppendSQL(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int) error {
 	var err error
 	// WITH
 	if len(q.CTEs) > 0 {
@@ -157,7 +155,7 @@ func (q PostgresSelectQuery) AppendSQL(dialect string, buf *strings.Builder, arg
 }
 
 func (q PostgresSelectQuery) ToSQL() (query string, args []interface{}, params map[string]int, err error) {
-	buf := bufpool.Get().(*strings.Builder)
+	buf := bufpool.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
 		bufpool.Put(buf)

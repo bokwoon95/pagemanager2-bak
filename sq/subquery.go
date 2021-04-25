@@ -1,8 +1,8 @@
 package sq
 
 import (
+	"bytes"
 	"fmt"
-	"strings"
 )
 
 type Subquery map[string]CustomField
@@ -37,7 +37,7 @@ func (subq Subquery) GetAlias() string {
 	return ""
 }
 
-func (subq Subquery) AppendSQL(dialect string, buf *strings.Builder, args *[]interface{}, params map[string]int) error {
+func (subq Subquery) AppendSQL(dialect string, buf *bytes.Buffer, args *[]interface{}, params map[string]int) error {
 	q := subq.GetQuery()
 	if q == nil {
 		return fmt.Errorf("empty subquery")

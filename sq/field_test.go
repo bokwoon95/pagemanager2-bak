@@ -1,7 +1,7 @@
 package sq
 
 import (
-	"strings"
+	"bytes"
 	"testing"
 
 	"github.com/bokwoon95/pagemanager/testutil"
@@ -17,7 +17,7 @@ func Test_field(t *testing.T) {
 	assertField := func(t *testing.T, f field, tt TT) {
 		is := testutil.New(t)
 		var _ Field = f
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		f.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
 		is.Equal(tt.wantQuery, buf.String())
@@ -74,7 +74,7 @@ func Test_field(t *testing.T) {
 
 	assertPredicate := func(t *testing.T, p Predicate, tt TT) {
 		is := testutil.New(t)
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		p.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
 		is.Equal(tt.wantQuery, buf.String())
@@ -103,7 +103,7 @@ func Test_field(t *testing.T) {
 
 	assertAssignment := func(t *testing.T, a Assignment, tt TT) {
 		is := testutil.New(t)
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		a.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
 		is.Equal(tt.wantQuery, buf.String())
@@ -131,7 +131,7 @@ func Test_CustomField(t *testing.T) {
 	assertField := func(t *testing.T, f CustomField, tt TT) {
 		is := testutil.New(t)
 		var _ Field = f
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		f.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
 		is.Equal(tt.wantQuery, buf.String())
@@ -169,7 +169,7 @@ func Test_CustomField(t *testing.T) {
 
 	assertPredicate := func(t *testing.T, p Predicate, tt TT) {
 		is := testutil.New(t)
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		p.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
 		is.Equal(tt.wantQuery, buf.String())
@@ -228,7 +228,7 @@ func Test_FieldLiteral(t *testing.T) {
 	assertField := func(t *testing.T, f FieldLiteral, tt TT) {
 		is := testutil.New(t)
 		var _ Field = f
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		f.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
 		is.Equal(tt.wantQuery, buf.String())
@@ -251,7 +251,7 @@ func Test_Fields(t *testing.T) {
 
 	assertFields := func(t *testing.T, fs Fields, tt TT) {
 		is := testutil.New(t)
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		fs.AppendSQLExclude("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
 		is.Equal(tt.wantQuery, buf.String())
@@ -269,7 +269,7 @@ func Test_Fields(t *testing.T) {
 
 	assertFieldsWithAlias := func(t *testing.T, fs Fields, tt TT) {
 		is := testutil.New(t)
-		buf := &strings.Builder{}
+		buf := &bytes.Buffer{}
 		var args []interface{}
 		fs.AppendSQLExcludeWithAlias("", buf, &args, make(map[string]int), tt.excludedTableQualifiers)
 		is.Equal(tt.wantQuery, buf.String())

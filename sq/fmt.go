@@ -1,6 +1,7 @@
 package sq
 
 import (
+	"bytes"
 	"database/sql"
 	"database/sql/driver"
 	"encoding/hex"
@@ -13,7 +14,7 @@ import (
 	"time"
 )
 
-func expandValues(buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string, format string, values []interface{}) error {
+func expandValues(buf *bytes.Buffer, args *[]interface{}, params map[string]int, excludedTableQualifiers []string, format string, values []interface{}) error {
 	var value interface{}
 	var err error
 	for i := strings.Index(format, "?"); i >= 0 && len(values) > 0; i = strings.Index(format, "?") {
@@ -29,17 +30,17 @@ func expandValues(buf *strings.Builder, args *[]interface{}, params map[string]i
 	return nil
 }
 
-func appendSQLValue(buf *strings.Builder, args *[]interface{}, params map[string]int, excludedTableQualifiers []string, value interface{}) error {
+func appendSQLValue(buf *bytes.Buffer, args *[]interface{}, params map[string]int, excludedTableQualifiers []string, value interface{}) error {
 	switch v := value.(type) {
 	case nil:
 		buf.WriteString("NULL")
 		return nil
 	case interface {
-		AppendSQLExclude(string, *strings.Builder, *[]interface{}, map[string]int, []string) error
+		AppendSQLExclude(string, *bytes.Buffer, *[]interface{}, map[string]int, []string) error
 	}:
 		return v.AppendSQLExclude("", buf, args, params, excludedTableQualifiers)
 	case interface {
-		AppendSQL(string, *strings.Builder, *[]interface{}, map[string]int) error
+		AppendSQL(string, *bytes.Buffer, *[]interface{}, map[string]int) error
 	}:
 		// TODO: propogate this error (ugh this will pollute the entire system)
 		return v.AppendSQL("", buf, args, params)
@@ -75,7 +76,7 @@ func randomString(n int) string {
 		letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
 	)
 	var src = rand.NewSource(time.Now().UnixNano())
-	sb := strings.Builder{}
+	sb := bytes.Buffer{}
 	sb.Grow(n)
 	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
 	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
@@ -93,7 +94,7 @@ func randomString(n int) string {
 }
 
 func QuestionInterpolate(query string, args ...interface{}) string {
-	buf := bufpool.Get().(*strings.Builder)
+	buf := bufpool.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
 		bufpool.Put(buf)
@@ -114,7 +115,7 @@ func QuestionInterpolate(query string, args ...interface{}) string {
 }
 
 func DollarInterpolate(query string, args ...interface{}) string {
-	buf := bufpool.Get().(*strings.Builder)
+	buf := bufpool.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
 		bufpool.Put(buf)
@@ -132,7 +133,7 @@ func DollarInterpolate(query string, args ...interface{}) string {
 	return result
 }
 
-func interpolateSQLValue(buf *strings.Builder, value interface{}) {
+func interpolateSQLValue(buf *bytes.Buffer, value interface{}) {
 	switch v := value.(type) {
 	case nil:
 		buf.WriteString("NULL")
@@ -192,7 +193,7 @@ func interpolateSQLValue(buf *strings.Builder, value interface{}) {
 	}
 }
 
-func appendSQLDisplay(buf *strings.Builder, value interface{}) {
+func appendSQLDisplay(buf *bytes.Buffer, value interface{}) {
 	switch v := value.(type) {
 	case nil:
 		buf.WriteString("𝗡𝗨𝗟𝗟")
@@ -242,7 +243,7 @@ func appendSQLDisplay(buf *strings.Builder, value interface{}) {
 }
 
 func QuestionToDollarPlaceholders(query string) string {
-	buf := bufpool.Get().(*strings.Builder)
+	buf := bufpool.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
 		bufpool.Put(buf)
