@@ -26,9 +26,12 @@ func Test_PredicateCases(t *testing.T) {
 		is.Equal("", f.GetName())
 	}
 	t.Run("empty", func(t *testing.T) {
+		is := testutil.New(t)
 		f := PredicateCases{}
-		tt := TT{wantQuery: "CASE END"}
-		assertField(t, f, tt)
+		buf := &strings.Builder{}
+		var args []interface{}
+		err := f.AppendSQLExclude("", buf, &args, make(map[string]int), nil)
+		is.True(err != nil)
 	})
 	t.Run("1 case", func(t *testing.T) {
 		u := NEW_USERS("u")
@@ -75,15 +78,21 @@ func Test_SimpleCases(t *testing.T) {
 		is.Equal("", f.GetName())
 	}
 	t.Run("empty", func(t *testing.T) {
+		is := testutil.New(t)
 		f := SimpleCases{}
-		tt := TT{wantQuery: "CASE NULL END"}
-		assertField(t, f, tt)
+		buf := &strings.Builder{}
+		var args []interface{}
+		err := f.AppendSQLExclude("", buf, &args, make(map[string]int), nil)
+		is.True(err != nil)
 	})
 	t.Run("expression only", func(t *testing.T) {
+		is := testutil.New(t)
 		u := NEW_USERS("u")
 		f := Case(u.USER_ID)
-		tt := TT{wantQuery: "CASE u.user_id END"}
-		assertField(t, f, tt)
+		buf := &strings.Builder{}
+		var args []interface{}
+		err := f.AppendSQLExclude("", buf, &args, make(map[string]int), nil)
+		is.True(err != nil)
 	})
 	t.Run("expression, 1 case", func(t *testing.T) {
 		u := NEW_USERS("u")
