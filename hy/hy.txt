@@ -34,6 +34,11 @@ urlFilter              : used for attributes that are considered URL (according 
 urlNormalizer          : <not needed?>
 evalArgs               : <not needed?>
 
+unsafe tags are forbidden (script, link, style, etc)
+unsafe attributes are forbidden (onX, style, etc)
+Forms have their own safety tier (necessary evil)
+change io.Writer to *bytes.Buffer so that the ecaper functions can write directly into the buffer, utilizing th Grow/WriteString methods as necessary.
+
 "accept":          contentTypePlain,
 "accept-charset":  contentTypeUnsafe,
 "action":          contentTypeURL,

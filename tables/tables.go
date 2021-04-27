@@ -110,6 +110,23 @@ func NEW_USERS(ctx context.Context, alias string) PM_USERS {
 	return tbl
 }
 
+type PM_PERMISSIONS struct {
+	sq.TableInfo
+	PERMISSION_NAME sq.StringField `sq:"type=TEXT misc=NOT_NULL,PRIMARY_KEY"`
+	DESCRIPTION     sq.StringField
+}
+
+func NEW_PERMISSIONS(ctx context.Context, alias string) PM_PERMISSIONS {
+	tbl := PM_PERMISSIONS{TableInfo: sq.TableInfo{Alias: alias}}
+	if tenantID, ok := ctx.Value(TenantIDKey{}).(string); ok && tenantID != "" {
+		tbl.TableInfo.Name = "pm_" + tenantID + "_permissions"
+	} else {
+		tbl.TableInfo.Name = "pm_permissions"
+	}
+	_ = sq.ReflectTable(&tbl)
+	return tbl
+}
+
 type PM_ROLES struct {
 	sq.TableInfo
 	NAME        sq.StringField `sq:"type=TEXT misc=NOT_NULL,PRIMARY_KEY"`

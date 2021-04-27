@@ -1,0 +1,10 @@
+there is a way to make datafolder a generic fs.FS, not just a specific directory on disk
+- the whole reason to make it a directory on disk is to make it writable
+- writable for image uploading to pm-images
+- writable for database.sqlite3
+- but write access for images and the database can be abstracted behind an interface:
+    - the image handler may be writing to disk in pm-images, but it may also be writing to an S3 bucket.
+    - the database handler may be writing to disk in $datafolder/database.sqlite3, but it may also be communicating with a global instance of a Postgres server.
+- In any case it is important to make the process of ($datafolder => database/sql connection) and ($datafolder => image reader/writer) into a dynamically dispatchable process. This means the parent struct will take in an interface or callback that handles the translation behind the scenes.
+- The payoff is that once all the writable components have been abstracted out, $datafolder can be a purely read-only embedded fs.FS and the entire binary can be deployed in multiple serves as a form of load balancing while still maintaining a connection to some globally shared database.
+    - The themes in pm-themes will essentially be read-only, but it is a good thing. Nobody can tamper with the themes. Nbody can tamper with the plugins, because those are already compiled into the binary.
