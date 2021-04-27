@@ -283,8 +283,11 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 	}
 	if class, ok := attrs.Dict["class"]; ok {
 		delete(attrs.Dict, "class")
-		if class = strings.TrimSpace(class); class != "" {
-			attrs.Class = append(attrs.Class, strings.Split(class, " ")...)
+		for _, cls := range strings.Split(class, " ") {
+			if cls == "" {
+				continue
+			}
+			attrs.Class = append(attrs.Class, cls)
 		}
 	}
 	return attrs

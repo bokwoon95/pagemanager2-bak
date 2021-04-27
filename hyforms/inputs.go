@@ -241,6 +241,9 @@ type Option struct {
 func (opt Option) WriteHTML(w io.Writer) error {
 	attrs := hy.ParseAttributes(opt.Selector, opt.Attributes)
 	attrs.Tag = "option"
+	if attrs.Dict == nil {
+		attrs.Dict = make(map[string]string)
+	}
 	attrs.Dict["value"] = opt.Value
 	if opt.Disabled {
 		attrs.Dict["disabled"] = hy.Enabled
