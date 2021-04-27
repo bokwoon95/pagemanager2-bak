@@ -17,7 +17,7 @@ type Page struct {
 	Valid        bool
 	URL          string
 	PageType     string
-	Disabled     bool
+	Hidden       bool
 	RedirectURL  string
 	PluginName   string
 	HandlerName  string
@@ -32,7 +32,7 @@ func (page *Page) RowMapper(PAGES tables.PM_PAGES) func(*sq.Row) error {
 		page.Valid = url.Valid
 		page.URL = url.String
 		page.PageType = row.String(PAGES.PAGE_TYPE)
-		page.Disabled = row.Bool(PAGES.DISABLED)
+		page.Hidden = row.Bool(PAGES.HIDDEN)
 		page.RedirectURL = row.String(PAGES.REDIRECT_URL)
 		page.PluginName = row.String(PAGES.PLUGIN_NAME)
 		page.HandlerName = row.String(PAGES.HANDLER_NAME)
@@ -70,7 +70,7 @@ func (pg PageData) CSS() (template.HTML, error) {
 		}
 		els = append(els, hy.H("link[rel=stylesheet]", hy.Attr{"href": asset.Path}))
 	}
-	return hy.Marshal(nil, els)
+	return hy.Marshal(els)
 }
 
 func (pg PageData) JS() (template.HTML, error) {
@@ -86,7 +86,7 @@ func (pg PageData) JS() (template.HTML, error) {
 		}
 		els = append(els, hy.H("script", hy.Attr{"src": asset.Path}))
 	}
-	return hy.Marshal(nil, els)
+	return hy.Marshal(els)
 }
 
 func (pg PageData) ContentSecurityPolicy() template.HTML {

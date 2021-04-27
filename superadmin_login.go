@@ -22,7 +22,7 @@ type superadminLoginData struct {
 }
 
 func (d *superadminLoginData) Form() (template.HTML, error) {
-	return hyforms.MarshalForm(nil, d.w, d.r, d.loginForm)
+	return hyforms.MarshalForm(d.w, d.r, d.loginForm)
 }
 
 func (d *superadminLoginData) loginForm(form *hyforms.Form) {

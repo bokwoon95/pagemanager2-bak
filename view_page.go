@@ -14,7 +14,7 @@ type viewPageData struct {
 }
 
 func (data *viewPageData) JS() (template.HTML, error) {
-	return hy.Marshal(hy.UnsafeSanitizer(), InlinedJS(data.w, pagemanagerFS, []string{"view_page.js"}))
+	return hy.Marshal(InlinedJS(data.w, pagemanagerFS, []string{"view_page.js"}))
 }
 
 func (pm *PageManager) viewPage(w http.ResponseWriter, r *http.Request) {

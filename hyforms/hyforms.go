@@ -37,7 +37,7 @@ var box encrypthash.Box = func() encrypthash.Box {
 	return box
 }()
 
-func MarshalForm(s hy.Sanitizer, w http.ResponseWriter, r *http.Request, fn func(*Form)) (template.HTML, error) {
+func MarshalForm(w http.ResponseWriter, r *http.Request, fn func(*Form)) (template.HTML, error) {
 	form := &Form{
 		request:      r,
 		inputNames:   make(map[string]struct{}),
@@ -65,10 +65,7 @@ func MarshalForm(s hy.Sanitizer, w http.ResponseWriter, r *http.Request, fn func
 		form.inputErrMsgs = validationErr.InputErrMsgs
 	}()
 	fn(form)
-	if len(form.marshalErrMsgs) > 0 {
-		return "", fmt.Errorf("marshal errors %v", form.marshalErrMsgs)
-	}
-	output, err := hy.Marshal(s, form)
+	output, err := hy.Marshal(form)
 	if err != nil {
 		return output, err
 	}

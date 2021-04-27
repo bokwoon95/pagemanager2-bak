@@ -28,7 +28,7 @@ type superadminSetupData struct {
 }
 
 func (d *superadminSetupData) Form() (template.HTML, error) {
-	return hyforms.MarshalForm(nil, d.w, d.r, d.setupForm)
+	return hyforms.MarshalForm(d.w, d.r, d.setupForm)
 }
 
 func (d *superadminSetupData) setupForm(form *hyforms.Form) {

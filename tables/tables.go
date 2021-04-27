@@ -52,7 +52,7 @@ type PM_PAGES struct {
 	// 301 Moved Permanently
 	REDIRECT_URL sq.StringField
 	// 404 Not Found
-	DISABLED sq.BooleanField
+	HIDDEN sq.BooleanField
 }
 
 func NEW_PAGES(ctx context.Context, alias string) PM_PAGES {

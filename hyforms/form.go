@@ -1,9 +1,8 @@
 package hyforms
 
 import (
-	"fmt"
+	"io"
 	"net/http"
-	"strings"
 
 	"github.com/bokwoon95/pagemanager/hy"
 )
@@ -16,24 +15,23 @@ const (
 )
 
 type Form struct {
-	mode           FormMode
-	attrs          hy.Attributes
-	children       []hy.Element
-	request        *http.Request
-	inputNames     map[string]struct{}
-	inputErrMsgs   map[string][]string
-	formErrMsgs    []string
-	marshalErrMsgs []string
+	mode         FormMode
+	attrs        hy.Attributes
+	children     []hy.Element
+	request      *http.Request
+	inputNames   map[string]struct{}
+	inputErrMsgs map[string][]string
+	formErrMsgs  []string
 }
 
-func (f *Form) AppendHTML(buf *strings.Builder) error {
+func (f *Form) WriteHTML(w io.Writer) error {
 	if f.mode == FormModeUnmarshal {
 		return nil
 	}
 	// check f.request.Context() for any CSRF token and prepend it into the form as necessary
 	// or should this be done in a hook?
 	f.attrs.Tag = "form"
-	err := hy.AppendHTML(buf, f.attrs, f.children)
+	err := hy.WriteHTML(w, f.attrs, f.children...)
 	if err != nil {
 		return err
 	}
@@ -41,17 +39,6 @@ func (f *Form) AppendHTML(buf *strings.Builder) error {
 }
 
 func (f *Form) Request() *http.Request { return f.request }
-
-func (f *Form) registerName(name string, skip int) {
-	if f.mode == FormModeUnmarshal {
-		return
-	}
-	if _, ok := f.inputNames[name]; ok {
-		file, line, _ := caller(skip + 1)
-		f.marshalErrMsgs = append(f.marshalErrMsgs, fmt.Sprintf("%s:%d duplicate name: %s", file, line, name))
-	}
-	f.inputNames[name] = struct{}{}
-}
 
 func (f *Form) Set(selector string, attributes map[string]string, children ...hy.Element) {
 	if f.mode == FormModeUnmarshal {

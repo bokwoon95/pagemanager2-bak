@@ -71,7 +71,7 @@ func (pm *PageManager) login(w http.ResponseWriter, r *http.Request) {
 			Title:  "PageManager Login",
 			Header: "PageManager Login",
 		}
-		tdata.Form, err = hyforms.MarshalForm(nil, w, r, data.LoginForm)
+		tdata.Form, err = hyforms.MarshalForm(w, r, data.LoginForm)
 		if err != nil {
 			pm.InternalServerError(w, r, erro.Wrap(err))
 			return

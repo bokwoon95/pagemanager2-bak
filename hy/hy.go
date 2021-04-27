@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"io"
 	"reflect"
 	"sort"
 	"strconv"
@@ -22,14 +23,12 @@ const (
 	Disabled = "\x01"
 )
 
-type Element interface{ AppendHTML(*bytes.Buffer) error }
-
-type Sanitizer interface{ Sanitize(string) string }
+type Element interface{ WriteHTML(io.Writer) error }
 
 // https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
 var singletonElements = map[string]struct{}{
-	"AREA": {}, "BASE": {}, "BR": {}, "COL": {}, "EMBED": {}, "HR": {}, "IMG": {}, "INPUT": {},
-	"LINK": {}, "META": {}, "PARAM": {}, "SOURCE": {}, "TRACK": {}, "WBR": {},
+	"area": {}, "base": {}, "br": {}, "col": {}, "embed": {}, "hr": {}, "img": {}, "input": {},
+	"link": {}, "meta": {}, "param": {}, "source": {}, "track": {}, "wbr": {},
 }
 
 var bufpool = sync.Pool{New: func() interface{} { return &bytes.Buffer{} }}
@@ -38,21 +37,6 @@ var defaultTags = []string{
 	"form", "input", "button", "label", "select", "option", "optgroup", "pre", "a", "fieldset", "legend", "textarea",
 }
 
-var (
-	defaultSanitizer = NewSanitizer(defaultTags...)
-	unsafeSanitizer  = NewSanitizer(append([]string{"script", "link"}, defaultTags...)...)
-)
-
-func DefaultSanitizer() Sanitizer { return defaultSanitizer }
-func UnsafeSanitizer() Sanitizer  { return unsafeSanitizer }
-func NoopSanitizer() Sanitizer    { return noopSanitizer{} }
-
-type noopSanitizer struct{}
-
-func (n noopSanitizer) Sanitize(s string) string { return s }
-
-// attributesMap is the list of attributes that we allow for each tag.
-// Attributes were referenced from MDN docs, so should be comprehensive.
 var attributesMap = map[string][]string{
 	"form": {"accept-charset", "autocomplete", "name", "rel", "action", "enctype", "method", "novalidate", "target"},
 	"input": {
@@ -113,8 +97,8 @@ func (el HTMLElement) Tag() string { return el.attrs.Tag }
 
 func (el HTMLElement) ID() string { return el.attrs.ID }
 
-func (el HTMLElement) AppendHTML(buf *bytes.Buffer) error {
-	err := AppendHTML(buf, el.attrs, el.children)
+func (el HTMLElement) WriteHTML(w io.Writer) error {
+	err := WriteHTML(w, el.attrs, el.children...)
 	if err != nil {
 		return err
 	}
@@ -134,7 +118,7 @@ func UnsafeTxt(a ...interface{}) Element {
 	return textValue{values: a, unsafe: true}
 }
 
-func (txt textValue) AppendHTML(buf *bytes.Buffer) error {
+func (txt textValue) WriteHTML(w io.Writer) error {
 	for i, value := range txt.values {
 		switch value := value.(type) {
 		case string:
@@ -142,22 +126,22 @@ func (txt textValue) AppendHTML(buf *bytes.Buffer) error {
 				continue
 			}
 			if txt.unsafe {
-				buf.WriteString(value)
+				io.WriteString(w, value)
 			} else {
-				template.HTMLEscape(buf, []byte(value))
+				io.WriteString(w, htmlEscaper(value))
 			}
 			if strings.TrimSpace(value) == "" {
 				continue
 			}
 			r, _ := utf8.DecodeLastRuneInString(value)
 			if i != len(txt.values)-1 && !unicode.IsSpace(r) {
-				buf.WriteByte(' ')
+				io.WriteString(w, " ")
 			}
 		default:
 			if txt.unsafe {
-				buf.WriteString(Stringify(value))
+				io.WriteString(w, Stringify(value))
 			} else {
-				template.HTMLEscape(buf, []byte(Stringify(value)))
+				io.WriteString(w, htmlEscaper(Stringify(value)))
 			}
 		}
 	}
@@ -174,10 +158,10 @@ func (l *Elements) AppendElements(children ...Element) {
 	*l = append(*l, children...)
 }
 
-func (l Elements) AppendHTML(buf *bytes.Buffer) error {
+func (l Elements) WriteHTML(w io.Writer) error {
 	var err error
 	for _, el := range l {
-		err = el.AppendHTML(buf)
+		err = el.WriteHTML(w)
 		if err != nil {
 			return err
 		}
@@ -191,12 +175,12 @@ type Attributes struct {
 	ParseErr error
 	Tag      string
 	ID       string
-	Class    string
+	Class    []string
 	Dict     map[string]string
 }
 
 func ParseAttributes(selector string, attributes map[string]string) Attributes {
-	type State int
+	type State uint8
 	const (
 		StateNone State = iota
 		StateTag
@@ -205,16 +189,8 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 		StateAttrName
 		StateAttrValue
 	)
-	attrs := Attributes{Dict: make(map[string]string)}
-	defer func() {
-		if attrs.ParseErr != nil {
-			for k, v := range attributes {
-				attrs.Dict[k] = v
-			}
-		}
-	}()
+	attrs := Attributes{Dict: attributes}
 	state := StateTag
-	var classes []string
 	var name []rune
 	var value []rune
 	for i, c := range selector {
@@ -226,7 +202,7 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 				attrs.ID = string(value)
 			case StateClass:
 				if len(value) > 0 {
-					classes = append(classes, string(value))
+					attrs.Class = append(attrs.Class, string(value))
 				}
 			case StateAttrName, StateAttrValue:
 				attrs.ParseErr = fmt.Errorf("unclosed attribute: position=%d char=%c selector=%s", i, c, selector)
@@ -254,18 +230,19 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 			continue
 		}
 		if c == ']' {
-			switch state {
-			case StateAttrName:
-				if _, ok := attrs.Dict[string(name)]; ok {
-					break
+			if state == StateAttrName || state == StateAttrValue {
+				if _, ok := attrs.Dict[string(name)]; !ok {
+					if attrs.Dict == nil {
+						attrs.Dict = make(map[string]string)
+					}
+					switch state {
+					case StateAttrName:
+						attrs.Dict[string(name)] = Enabled
+					case StateAttrValue:
+						attrs.Dict[string(name)] = string(value)
+					}
 				}
-				attrs.Dict[string(name)] = Enabled
-			case StateAttrValue:
-				if _, ok := attrs.Dict[string(name)]; ok {
-					break
-				}
-				attrs.Dict[string(name)] = string(value)
-			default:
+			} else {
 				attrs.ParseErr = fmt.Errorf("unopened attribute: position=%d char=%c selector=%s", i, c, selector)
 				return attrs
 			}
@@ -292,37 +269,28 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 		case StateID:
 			attrs.ID = string(value)
 		case StateClass:
-			classes = append(classes, string(value))
+			attrs.Class = append(attrs.Class, string(value))
 		case StateNone: // do nothing i.e. drop the value
 		case StateAttrName, StateAttrValue:
-			attrs.ParseErr = fmt.Errorf("unclosed attribute: selector=%s", selector)
+			attrs.ParseErr = fmt.Errorf("unclosed attribute: selector=%s, value: %s", selector, string(value))
 			return attrs
 		}
 		value = value[:0]
 	}
-	if len(classes) > 0 {
-		attrs.Class = strings.Join(classes, " ")
+	if id, ok := attrs.Dict["id"]; ok {
+		delete(attrs.Dict, "id")
+		attrs.ID = id
 	}
-	for name, value := range attributes {
-		switch name {
-		case "id":
-			attrs.ID = value
-		case "class":
-			if value != "" {
-				if attrs.Class == "" {
-					attrs.Class = value
-				} else {
-					attrs.Class += " " + value
-				}
-			}
-		default:
-			attrs.Dict[name] = value
+	if class, ok := attrs.Dict["class"]; ok {
+		delete(attrs.Dict, "class")
+		if class = strings.TrimSpace(class); class != "" {
+			attrs.Class = append(attrs.Class, strings.Split(class, " ")...)
 		}
 	}
 	return attrs
 }
 
-func AppendHTML(buf *bytes.Buffer, attrs Attributes, children []Element) error {
+func WriteHTML(w io.Writer, attrs Attributes, children ...Element) error {
 	var err error
 	if attrs.ParseErr != nil {
 		return attrs.ParseErr
@@ -330,34 +298,48 @@ func AppendHTML(buf *bytes.Buffer, attrs Attributes, children []Element) error {
 	if attrs.Tag == "" {
 		attrs.Tag = "div"
 	}
-	buf.WriteString(`<`)
-	template.HTMLEscape(buf, []byte(attrs.Tag))
-	AppendAttributes(buf, attrs)
-	buf.WriteString(`>`)
-	if _, ok := singletonElements[strings.ToUpper(attrs.Tag)]; !ok {
+	escapedTag := htmlNospaceEscaper(attrs.Tag)
+	io.WriteString(w, `<`+escapedTag)
+	WriteAttributes(w, attrs)
+	io.WriteString(w, `>`)
+	if _, ok := singletonElements[strings.ToLower(attrs.Tag)]; ok {
+		return nil
+	}
+	if escapedTag == "style" {
+		buf := bufpool.Get().(*bytes.Buffer)
+		defer func() {
+			buf.Reset()
+			bufpool.Put(buf)
+		}()
 		for _, child := range children {
-			err = child.AppendHTML(buf)
+			err = child.WriteHTML(buf)
 			if err != nil {
 				return err
 			}
 		}
-		buf.WriteString(`</`)
-		template.HTMLEscape(buf, []byte(attrs.Tag))
-		buf.WriteString(`>`)
+		io.WriteString(w, cssEscaper(buf.String()))
+	} else {
+		for _, child := range children {
+			err = child.WriteHTML(w)
+			if err != nil {
+				return err
+			}
+		}
 	}
+	io.WriteString(w, `</`+escapedTag+`>`)
 	return nil
 }
 
-func AppendAttributes(buf *bytes.Buffer, attrs Attributes) {
+func WriteAttributes(w io.Writer, attrs Attributes) {
 	if attrs.ID != "" {
-		buf.WriteString(` id="`)
-		template.HTMLEscape(buf, []byte(attrs.ID))
-		buf.WriteString(`"`)
+		io.WriteString(w, ` id="`)
+		io.WriteString(w, attrEscaper(attrs.ID))
+		io.WriteString(w, ` "`)
 	}
-	if attrs.Class != "" {
-		buf.WriteString(` class="`)
-		template.HTMLEscape(buf, []byte(attrs.Class))
-		buf.WriteString(`"`)
+	if len(attrs.Class) > 0 {
+		io.WriteString(w, ` class="`)
+		io.WriteString(w, attrEscaper(strings.Join(attrs.Class, " ")))
+		io.WriteString(w, `"`)
 	}
 	var names []string
 	for name := range attrs.Dict {
@@ -368,42 +350,42 @@ func AppendAttributes(buf *bytes.Buffer, attrs Attributes) {
 		}
 	}
 	sort.Strings(names)
+	var value string
 	for _, name := range names {
-		if name == "" {
+		value = attrs.Dict[name]
+		if name == "" || value == Disabled {
 			continue
 		}
-		value := attrs.Dict[name]
-		switch value {
-		case Enabled:
-			buf.WriteString(` `)
-			template.HTMLEscape(buf, []byte(name))
-		case Disabled:
+		io.WriteString(w, ` `)
+		io.WriteString(w, htmlNospaceEscaper(name))
+		if value == Enabled {
 			continue
-		default:
-			buf.WriteString(` `)
-			template.HTMLEscape(buf, []byte(name))
-			buf.WriteString(`="`)
-			template.HTMLEscape(buf, []byte(value))
-			buf.WriteString(`"`)
 		}
+		io.WriteString(w, `="`)
+		if strings.EqualFold(name, "style") {
+			io.WriteString(w, cssEscaper(value))
+		} else if strings.EqualFold(name, "srcset") {
+			io.WriteString(w, srcsetFilterAndEscaper(value))
+		} else if t := attrType(name); t == contentTypeURL {
+			io.WriteString(w, urlFilter(value))
+		} else {
+			io.WriteString(w, attrEscaper(value))
+		}
+		io.WriteString(w, `"`)
 	}
 }
 
-func Marshal(s Sanitizer, el Element) (template.HTML, error) {
+func Marshal(el Element) (template.HTML, error) {
 	buf := bufpool.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
 		bufpool.Put(buf)
 	}()
-	err := el.AppendHTML(buf)
+	err := el.WriteHTML(buf)
 	if err != nil {
 		return "", err
 	}
-	if s == nil {
-		s = DefaultSanitizer()
-	}
-	output := s.Sanitize(buf.String())
-	return template.HTML(output), nil
+	return template.HTML(buf.String()), nil
 }
 
 // adapted from database/sql:asString, text/template:printableValue,printValue
@@ -443,6 +425,8 @@ func Stringify(v interface{}) string {
 		return strconv.FormatFloat(v, 'g', -1, 64)
 	case bool:
 		return strconv.FormatBool(v)
+	case nil:
+		return "[nil]"
 	}
 	rv := reflect.ValueOf(v)
 	for {
@@ -452,18 +436,18 @@ func Stringify(v interface{}) string {
 		rv = rv.Elem()
 	}
 	if !rv.IsValid() {
-		return "<no value>"
+		return "[no value]"
 	}
 	if rv.Kind() == reflect.Chan {
-		return "<channel>"
+		return "[channel]"
 	}
 	if rv.Kind() == reflect.Func {
-		return "<function>"
+		return "[function]"
 	}
 	return fmt.Sprint(v)
 }
 
-func NewSanitizer(allowedTags ...string) Sanitizer {
+func NewSanitizer(allowedTags ...string) *bluemonday.Policy {
 	p := bluemonday.UGCPolicy()
 	p.AllowStyling()
 	p.AllowImages()

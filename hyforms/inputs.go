@@ -1,8 +1,8 @@
 package hyforms
 
 import (
+	"io"
 	"strconv"
-	"strings"
 
 	"github.com/bokwoon95/pagemanager/hy"
 )
@@ -32,7 +32,7 @@ func (i *Input) Set(selector string, attributes map[string]string) *Input {
 	return i
 }
 
-func (i *Input) AppendHTML(buf *strings.Builder) error {
+func (i *Input) WriteHTML(w io.Writer) error {
 	if i.attrs.Dict == nil {
 		i.attrs.Dict = make(map[string]string)
 	}
@@ -40,7 +40,7 @@ func (i *Input) AppendHTML(buf *strings.Builder) error {
 	i.attrs.Dict["type"] = i.inputType
 	i.attrs.Dict["name"] = i.name
 	i.attrs.Dict["value"] = i.defaultValue
-	err := hy.AppendHTML(buf, i.attrs, nil)
+	err := hy.WriteHTML(w, i.attrs, nil)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (i *ToggledInput) Set(selector string, attributes map[string]string) *Toggl
 	return i
 }
 
-func (i *ToggledInput) AppendHTML(buf *strings.Builder) error {
+func (i *ToggledInput) WriteHTML(w io.Writer) error {
 	if i.attrs.Dict == nil {
 		i.attrs.Dict = make(map[string]string)
 	}
@@ -141,7 +141,7 @@ func (i *ToggledInput) AppendHTML(buf *strings.Builder) error {
 	} else {
 		i.attrs.Dict["checked"] = hy.Disabled
 	}
-	err := hy.AppendHTML(buf, i.attrs, nil)
+	err := hy.WriteHTML(w, i.attrs, nil)
 	if err != nil {
 		return err
 	}
@@ -238,7 +238,7 @@ type Option struct {
 	Options    Options
 }
 
-func (opt Option) AppendHTML(buf *strings.Builder) error {
+func (opt Option) WriteHTML(w io.Writer) error {
 	attrs := hy.ParseAttributes(opt.Selector, opt.Attributes)
 	attrs.Tag = "option"
 	attrs.Dict["value"] = opt.Value
@@ -248,7 +248,7 @@ func (opt Option) AppendHTML(buf *strings.Builder) error {
 	if opt.Selected {
 		attrs.Dict["selected"] = hy.Enabled
 	}
-	err := hy.AppendHTML(buf, attrs, []hy.Element{hy.Txt(opt.Display)})
+	err := hy.WriteHTML(w, attrs, hy.Txt(opt.Display))
 	if err != nil {
 		return err
 	}
@@ -271,22 +271,22 @@ func (i *SelectInput) Set(selector string, attributes map[string]string) *Select
 	return i
 }
 
-func (i *SelectInput) AppendHTML(buf *strings.Builder) error {
+func (i *SelectInput) WriteHTML(w io.Writer) error {
 	if i.attrs.Dict == nil {
 		i.attrs.Dict = make(map[string]string)
 	}
 	if i.attrs.ParseErr != nil {
 		return i.attrs.ParseErr
 	}
-	buf.WriteString(`<select`)
+	io.WriteString(w, `<select`)
 	i.attrs.Dict["name"] = i.name
-	hy.AppendAttributes(buf, i.attrs)
-	buf.WriteString(`>`)
+	hy.WriteAttributes(w, i.attrs)
+	io.WriteString(w, `>`)
 	var err error
 	for _, opt := range i.Options {
 		switch opt.Optgroup {
 		case "":
-			opt.AppendHTML(buf)
+			opt.WriteHTML(w)
 		default:
 			attrs := hy.ParseAttributes(opt.Selector, opt.Attributes)
 			attrs.Tag = "optgroup"
@@ -304,13 +304,13 @@ func (i *SelectInput) AppendHTML(buf *strings.Builder) error {
 				}
 				children = append(children, option)
 			}
-			err = hy.AppendHTML(buf, attrs, children)
+			err = hy.WriteHTML(w, attrs, children...)
 			if err != nil {
 				return err
 			}
 		}
 	}
-	buf.WriteString(`</select>`)
+	io.WriteString(w, `</select>`)
 	return nil
 }
 
@@ -348,13 +348,13 @@ func (i *TextareaInput) Set(selector string, attributes map[string]string) *Text
 	return i
 }
 
-func (i *TextareaInput) AppendHTML(buf *strings.Builder) error {
+func (i *TextareaInput) WriteHTML(w io.Writer) error {
 	if i.attrs.Dict == nil {
 		i.attrs.Dict = make(map[string]string)
 	}
 	i.attrs.Tag = "textarea"
 	i.attrs.Dict["name"] = i.name
-	err := hy.AppendHTML(buf, i.attrs, []hy.Element{hy.Txt(i.defaultValue)})
+	err := hy.WriteHTML(w, i.attrs, hy.Txt(i.defaultValue))
 	if err != nil {
 		return err
 	}

@@ -26,7 +26,7 @@ func (pm *PageManager) InternalServerError(w http.ResponseWriter, r *http.Reques
 		Title:  "500 Internal Server Error",
 		Header: "500 Internal Server Error",
 	}
-	data.ErrMsg, err = hy.Marshal(nil, hy.Elements{
+	data.ErrMsg, err = hy.Marshal(hy.Elements{
 		hy.H("p.f4", nil, hy.Txt("Something went wrong, here is the error trace (read top down)")),
 		hy.H("p.f5", nil, hy.Txt("URL:", LocaleURL(r, ""))),
 		hy.H("pre.white-space-prewrap.word-wrap", nil, hy.Txt(erro.Sdump(serverErr))),
@@ -59,7 +59,7 @@ func (pm *PageManager) Unauthorized(w http.ResponseWriter, r *http.Request) {
 	}
 	els.Append("p", nil, hy.H("a", hy.Attr{"href": "/pm-superadmin-login"}, hy.Txt("Log In as Superadmin")), hy.Txt("."))
 	els.Append("p", nil, hy.H("a", hy.Attr{"href": LocaleURL(r, "/")}, hy.Txt("Go Home")), hy.Txt("."))
-	data.ErrMsg, err = hy.Marshal(nil, els)
+	data.ErrMsg, err = hy.Marshal(els)
 	if err != nil {
 		io.WriteString(w, fmt.Errorf("403 Forbidden: %s", err).Error())
 		return
@@ -78,7 +78,7 @@ func (pm *PageManager) Forbidden(w http.ResponseWriter, r *http.Request) {
 		Title:  "403 Forbidden",
 		Header: "403 Forbidden",
 	}
-	data.ErrMsg, _ = hy.Marshal(nil, hy.Elements{
+	data.ErrMsg, _ = hy.Marshal(hy.Elements{
 		hy.H("p", nil, hy.Txt("You are not authorized to do this action.")),
 		hy.H("p", nil, hy.H("a", hy.Attr{"href": LocaleURL(r, "/")}, hy.Txt("Go Home")), hy.Txt(".")),
 	})

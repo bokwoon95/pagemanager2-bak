@@ -212,7 +212,7 @@ func (pm *PageManager) PageManager(next http.Handler) http.Handler {
 		case PageTypeRedirect:
 			Redirect(w, r, page.RedirectURL)
 		case PageTypeDisabled:
-			if page.Disabled {
+			if page.Hidden {
 				http.NotFound(w, r)
 				return
 			}

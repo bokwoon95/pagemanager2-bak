@@ -3,6 +3,7 @@ package pagemanager
 import (
 	"crypto/sha256"
 	"encoding/base64"
+	"io"
 	"io/fs"
 	"net/http"
 	"sort"
@@ -23,7 +24,7 @@ func InlinedJS(w http.ResponseWriter, fsys fs.FS, files []string) InlinedJSEleme
 	return InlinedJSElement{w: w, fsys: fsys, files: files}
 }
 
-func (el InlinedJSElement) AppendHTML(buf *strings.Builder) error {
+func (el InlinedJSElement) WriteHTML(w io.Writer) error {
 	b64HashSet := make(map[string]struct{})
 	for _, file := range el.files {
 		data, err := fs.ReadFile(el.fsys, file)
@@ -34,7 +35,7 @@ func (el InlinedJSElement) AppendHTML(buf *strings.Builder) error {
 		b64Hash := base64.StdEncoding.EncodeToString(hash[:])
 		b64HashSet[`'sha256-`+b64Hash+`'`] = struct{}{}
 		attrs := hy.Attributes{Tag: "script"}
-		err = hy.AppendHTML(buf, attrs, []hy.Element{hy.UnsafeTxt(data)})
+		err = hy.WriteHTML(w, attrs, hy.UnsafeTxt(data))
 		if err != nil {
 			return erro.Wrap(err)
 		}

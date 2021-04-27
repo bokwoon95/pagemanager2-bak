@@ -23,11 +23,11 @@ type createPageData struct {
 }
 
 func (data *createPageData) Form() (template.HTML, error) {
-	return hyforms.MarshalForm(nil, data.w, data.r, data.formCallback)
+	return hyforms.MarshalForm(data.w, data.r, data.formCallback)
 }
 
 func (data *createPageData) JS() (template.HTML, error) {
-	return hy.Marshal(hy.UnsafeSanitizer(), InlinedJS(data.w, pagemanagerFS, []string{"create_page.js"}))
+	return hy.Marshal(InlinedJS(data.w, pagemanagerFS, []string{"create_page.js"}))
 }
 
 func (data *createPageData) formCallback(form *hyforms.Form) {
@@ -86,7 +86,7 @@ func (data *createPageData) formCallback(form *hyforms.Form) {
 	handlerName := form.Text("pm-handler-name", data.HandlerName).Set("#pm-handler-name", nil)
 	content := form.Textarea("pm-content", data.Content).Set("#pm-content", nil)
 	redirectURL := form.Text("pm-redirect-url", data.RedirectURL).Set("#pm-redirect-url", nil)
-	disabled := form.Checkbox("pm-disabled", "", data.Disabled).Set("#pm-disabled.pointer.dib", nil)
+	disabled := form.Checkbox("pm-disabled", "", data.Hidden).Set("#pm-disabled.pointer.dib", nil)
 
 	form.AppendElements(
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer", hy.Attr{"for": pageURL.ID()}, hy.Txt("URL: "))),
@@ -136,7 +136,7 @@ func (data *createPageData) formCallback(form *hyforms.Form) {
 		data.HandlerName = handlerName.Value()
 		data.Content = content.Value()
 		data.RedirectURL = redirectURL.Value()
-		data.Disabled = disabled.Checked()
+		data.Hidden = disabled.Checked()
 	})
 }
 

@@ -30,7 +30,7 @@ func (d *dashboardData) PagesList() (template.HTML, error) {
 		switch page.PageType {
 		case PageTypeDisabled:
 			div.Append("div", nil,
-				hy.Txt("Disabled:", page.Disabled),
+				hy.Txt("Disabled:", page.Hidden),
 				hy.H("a", hy.Attr{"href": URLEditPage + "?url=" + page.URL}, hy.Txt("edit")),
 			)
 		case PageTypeRedirect:
@@ -58,7 +58,7 @@ func (d *dashboardData) PagesList() (template.HTML, error) {
 		}
 		els.AppendElements(div)
 	}
-	return hy.Marshal(nil, els)
+	return hy.Marshal(els)
 }
 
 func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {

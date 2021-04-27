@@ -38,7 +38,7 @@ func Test_ParseAttributes(t *testing.T) {
 		assertOK(t, selector, map[string]string{}, Attributes{
 			Tag:   "p",
 			ID:    "id2",
-			Class: "class1 class2 class3",
+			Class: []string{"class1", "class2", "class3"},
 			Dict: map[string]string{
 				"attr1": "val1",
 				"attr2": "val2",
@@ -60,7 +60,7 @@ func Test_ParseAttributes(t *testing.T) {
 		assertOK(t, selector, attributes, Attributes{
 			Tag:   "p",
 			ID:    "id3",
-			Class: "class1 class2 class3 class4 class5 class6",
+			Class: []string{"class1", "class2", "class3", "class4", "class5", "class6"},
 			Dict: map[string]string{
 				"attr1": "value-1",
 				"attr2": "value-2",
@@ -75,16 +75,34 @@ func Test_XSS(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		is := testutil.New(t)
 		div := H("", Attr{"id": `no-op" class="http://malicious.com"`})
-		out, err := Marshal(NoopSanitizer(), div)
+		out, err := Marshal(div)
 		is.NoErr(err)
 		fmt.Println(out)
 	})
 	t.Run("basic", func(t *testing.T) {
 		is := testutil.New(t)
 		div := H("div", nil, Txt("<script>alert('xss')</script>"))
-		out, err := Marshal(NoopSanitizer(), div)
+		out, err := Marshal(div)
 		is.NoErr(err)
 		fmt.Println(out)
+	})
+	t.Run("href", func(t *testing.T) {
+		is := testutil.New(t)
+		div := H("a", Attr{"href": "/users"}, Txt("users"))
+		out, err := Marshal(div)
+		is.NoErr(err)
+		fmt.Println(out)
+	})
+	t.Run("with template", func(t *testing.T) {
+		is := testutil.New(t)
+		tmpl, err := template.New("").Parse(`{{ . }}`)
+		is.NoErr(err)
+		payload, err := Marshal(H("script", nil, Txt(`Set.constructor`+"`"+`alert\x28document.domain\x29`)))
+		is.NoErr(err)
+		buf := &bytes.Buffer{}
+		err = tmpl.Execute(buf, payload)
+		is.NoErr(err)
+		fmt.Println(buf.String())
 	})
 }
 
@@ -130,8 +148,7 @@ func (rs tableRows) TableRows() (template.HTML, error) {
 			H("td", nil, Txt(r.EatingHabits)),
 		)
 	}
-	// return Marshal(NoopSanitizer(), els)
-	return Marshal(nil, els)
+	return Marshal(els)
 }
 
 func BenchmarkHy(b *testing.B) {
