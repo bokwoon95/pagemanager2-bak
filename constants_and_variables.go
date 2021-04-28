@@ -49,7 +49,11 @@ const (
 )
 
 const (
-	permissionPagePerms = "pagemanager:page-perms"
+	permissionPagePerms  = "pagemanager:page-perms"
+	permissionAddPage    = "pagemanager:add-page"
+	permissionViewPage   = "pagemanager:view-page"
+	permissionChangePage = "pagemanager:change-page"
+	permissionDeletePage = "pagemanager:delete-page"
 )
 
 const (
