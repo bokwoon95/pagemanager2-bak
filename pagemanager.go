@@ -83,6 +83,10 @@ func New() (*PageManager, error) {
 		tables.NEW_PAGEDATA(ctx, ""),
 		tables.NEW_USERS(ctx, ""),
 		tables.NEW_ROLES(ctx, ""),
+		tables.NEW_PERMISSIONS(ctx, ""),
+		tables.NEW_USER_ROLES(ctx, ""),
+		tables.NEW_USER_PERMISSIONS(ctx, ""),
+		tables.NEW_ROLE_PERMISSIONS(ctx, ""),
 		tables.NEW_SESSIONS(ctx, ""),
 		tables.NEW_LOCALES(ctx, ""),
 	)

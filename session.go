@@ -20,10 +20,34 @@ type User struct {
 	LoginID      string
 	Email        string
 	Displayname  string
-	Roles        []string
-	Permissions  map[string]interface{}
+	Roles        map[string]struct{}
+	Permissions  map[string]struct{}
 	UserData     map[string]interface{}
 }
+
+/*
+SELECT
+    u.user_id
+    ,u.public_user_id
+    ,u.login_id
+    ,u.email
+    ,u.displayname
+    ,json_group_array(ur.role_name) AS roles
+    ,json_group_array(up.permission_name) AS permissions
+    ,json_group_array(rp.permission_name) AS role_permissions
+FROM
+    pm_users AS u
+    LEFT JOIN pm_user_permissions AS up ON up.user_id = u.user_id
+    LEFT JOIN pm_user_roles AS ur ON ur.user_id = u.user_id
+    JOIN pm_role_permissions AS rp ON rp.role_name = ur.role_name
+GROUP BY
+    u.user_id
+    ,u.public_user_id
+    ,u.login_id
+    ,u.email
+    ,u.displayname
+;
+*/
 
 func (user *User) RowMapper(u tables.PM_USERS) func(*sq.Row) error {
 	return func(row *sq.Row) error {
@@ -32,40 +56,36 @@ func (user *User) RowMapper(u tables.PM_USERS) func(*sq.Row) error {
 		user.UserID = userID.Int64
 		user.PublicUserID = row.String(u.PUBLIC_USER_ID)
 		user.LoginID = row.String(u.LOGIN_ID)
-		rolesBytes := row.Bytes(u.ROLES)
-		permissionsBytes := row.Bytes(u.PERMISSIONS)
+		// TODO: pagemanager:perms
+		// rolesBytes := row.Bytes(u.ROLES)
+		// permissionsBytes := row.Bytes(u.PERMISSIONS)
 		return row.Accumulate(func() error {
-			var err error
-			if len(rolesBytes) > 0 {
-				err = json.Unmarshal(rolesBytes, &user.Roles)
-				if err != nil {
-					return erro.Wrap(err)
-				}
-			}
-			if len(permissionsBytes) > 0 {
-				err = json.Unmarshal(permissionsBytes, &user.Permissions)
-				if err != nil {
-					return erro.Wrap(err)
-				}
-			}
+			// var err error
+			// if len(rolesBytes) > 0 {
+			// 	err = json.Unmarshal(rolesBytes, &user.Roles)
+			// 	if err != nil {
+			// 		return erro.Wrap(err)
+			// 	}
+			// }
+			// if len(permissionsBytes) > 0 {
+			// 	err = json.Unmarshal(permissionsBytes, &user.Permissions)
+			// 	if err != nil {
+			// 		return erro.Wrap(err)
+			// 	}
+			// }
 			return nil
 		})
 	}
 }
 
-func (user *User) HasPagePerms(perms PagePerms) bool {
-	p, _ := user.Permissions[permissionPagePerms].(float64)
-	userPerms := PagePerms(int(p))
-	return perms&userPerms != 0
+func (user *User) HasPermission(permission string) bool {
+	_, ok := user.Permissions[permission]
+	return ok
 }
 
 func (user *User) HasRole(role string) bool {
-	for _, r := range user.Roles {
-		if role == r {
-			return true
-		}
-	}
-	return false
+	_, ok := user.Roles[role]
+	return ok
 }
 
 type SessionUser struct {
@@ -177,17 +197,18 @@ func (pm *PageManager) getSession(w http.ResponseWriter, r *http.Request) (user 
 	}
 	data := make(map[string]interface{})
 	if len(user.Roles) > 0 {
-		AUTHZ_GROUPS := tables.NEW_ROLES(r.Context(), "ag")
-		ord := sq.Case(AUTHZ_GROUPS.NAME)
-		for i, group := range user.Roles {
-			ord = ord.When(group, i+1)
-		}
+		ROLES := tables.NEW_ROLES(r.Context(), "ag")
+		ord := sq.Case(ROLES.ROLE_NAME)
+		// TODO: pagemanager:perms
+		// for i, group := range user.Roles {
+		// 	ord = ord.When(group, i+1)
+		// }
 		_, err = sq.Fetch(pm.dataDB, sq.SQLite.
-			From(AUTHZ_GROUPS).
-			Where(AUTHZ_GROUPS.NAME.In(user.Roles)).
+			From(ROLES).
+			Where(ROLES.ROLE_NAME.In(user.Roles)).
 			OrderBy(ord),
 			func(row *sq.Row) error {
-				b := row.Bytes(AUTHZ_GROUPS.PERMISSIONS)
+				b := row.Bytes(ROLES.ROLE_NAME)
 				return row.Accumulate(func() error {
 					var m map[string]interface{}
 					err = json.Unmarshal(b, &m)
@@ -205,10 +226,11 @@ func (pm *PageManager) getSession(w http.ResponseWriter, r *http.Request) (user 
 			return user, erro.Wrap(err)
 		}
 	}
-	for k, v := range user.Permissions {
-		data[k] = v
-	}
-	user.Permissions = data
+	// TODO: pagemanager:perms
+	// for k, v := range user.Permissions {
+	// 	data[k] = v
+	// }
+	// user.Permissions = data
 	return user, nil
 }
 

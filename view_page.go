@@ -28,7 +28,7 @@ func (pm *PageManager) viewPage(w http.ResponseWriter, r *http.Request) {
 		case !user.Valid:
 			pm.RedirectToLogin(w, r)
 			return
-		case !user.HasPagePerms(PagePermsView):
+		case !user.HasPermission(permissionViewPage):
 			pm.Forbidden(w, r)
 			return
 		}

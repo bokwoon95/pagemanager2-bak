@@ -3,7 +3,6 @@ package pagemanager
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -176,23 +175,23 @@ func LocateSuperadminFolder(datafolder string) (string, error) {
 }
 
 func seedData(ctx context.Context, db sq.Queryer) error {
-	p := tables.NEW_PAGES(ctx, "p")
+	PAGES := tables.NEW_PAGES(ctx, "p")
 	db = sq.NewDB(db, nil, sq.Linterpolate|sq.Lcaller)
-	_, _, err := sq.Exec(db, sq.SQLite.DeleteFrom(p), sq.ErowsAffected)
+	_, _, err := sq.Exec(db, sq.SQLite.DeleteFrom(PAGES), sq.ErowsAffected)
 	if err != nil {
 		return erro.Wrap(err)
 	}
 	// pm_pages.content
 	_, _, err = sq.Exec(db, sq.SQLite.
-		InsertInto(p).
+		InsertInto(PAGES).
 		Valuesx(func(col *sq.Column) error {
-			col.SetString(p.PAGE_TYPE, PageTypeContent)
-			col.SetString(p.URL, `/hello/`)
-			col.SetString(p.CONTENT, `<h1>This is hello</h1>`)
+			col.SetString(PAGES.PAGE_TYPE, PageTypeContent)
+			col.SetString(PAGES.URL, `/hello/`)
+			col.SetString(PAGES.CONTENT, `<h1>This is hello</h1>`)
 			return nil
 		}).
-		OnConflict(p.URL).
-		DoUpdateSet(sq.SetExcluded(p.CONTENT)),
+		OnConflict(PAGES.URL).
+		DoUpdateSet(sq.SetExcluded(PAGES.CONTENT)),
 		sq.ErowsAffected,
 	)
 	if err != nil {
@@ -205,85 +204,35 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 		{"/posts", "plainsimple", "PostsIndex"},
 	}
 	_, _, err = sq.Exec(db, sq.SQLite.
-		InsertInto(p).
+		InsertInto(PAGES).
 		Valuesx(func(col *sq.Column) error {
 			for _, t := range templates {
-				col.SetString(p.PAGE_TYPE, PageTypeTemplate)
-				col.SetString(p.URL, t.url)
-				col.SetString(p.THEME_PATH, t.theme_path)
-				col.SetString(p.TEMPLATE_NAME, t.template)
+				col.SetString(PAGES.PAGE_TYPE, PageTypeTemplate)
+				col.SetString(PAGES.URL, t.url)
+				col.SetString(PAGES.THEME_PATH, t.theme_path)
+				col.SetString(PAGES.TEMPLATE_NAME, t.template)
 			}
 			return nil
 		}).
-		OnConflict(p.URL).
-		DoUpdateSet(sq.SetExcluded(p.THEME_PATH), sq.SetExcluded(p.TEMPLATE_NAME)),
+		OnConflict(PAGES.URL).
+		DoUpdateSet(sq.SetExcluded(PAGES.THEME_PATH), sq.SetExcluded(PAGES.TEMPLATE_NAME)),
 		sq.ErowsAffected,
 	)
 	if err != nil {
 		return erro.Wrap(err)
 	}
-	// pm_sessions
-	s := tables.NEW_SESSIONS(ctx, "s")
-	var sessions = []struct {
-		sessionhash string
-		userid      int64
-		sessiondata map[string]interface{}
-	}{
-		{"1234", 0, map[string]interface{}{"yeet": 1}},
+	// pm_users
+	USERS := tables.NEW_USERS(ctx, "u")
+	_, _, err = sq.Exec(db, sq.SQLite.DeleteFrom(USERS), sq.ErowsAffected)
+	if err != nil {
+		return erro.Wrap(err)
 	}
 	_, _, err = sq.Exec(db, sq.SQLite.
-		InsertInto(s).
+		InsertInto(USERS).
 		Valuesx(func(col *sq.Column) error {
-			var b []byte
-			for _, sess := range sessions {
-				col.SetString(s.SESSION_HASH, sess.sessionhash)
-				col.SetInt64(s.USER_ID, sess.userid)
-				b, err = json.Marshal(sess.sessiondata)
-				if err != nil {
-					return erro.Wrap(err)
-				}
-				col.Set(s.SESSION_DATA, string(b))
-			}
-			return nil
-		}).
-		OnConflict().DoNothing(),
-		sq.ErowsAffected,
-	)
-	if err != nil {
-		return erro.Wrap(err)
-	}
-	// pm_users, pm_authz_groups
-	u, ag := tables.NEW_USERS(ctx, "u"), tables.NEW_ROLES(ctx, "ag")
-	_, _, err = sq.Exec(db, sq.SQLite.DeleteFrom(u), sq.ErowsAffected)
-	if err != nil {
-		return erro.Wrap(err)
-	}
-	_, _, err = sq.Exec(db, sq.SQLite.DeleteFrom(ag), sq.ErowsAffected)
-	if err != nil {
-		return erro.Wrap(err)
-	}
-	var users = []struct {
-		userid   int64
-		publicid string
-		username string
-		roles    []string
-	}{
-		{1, "", "", []string{roleSuperadmin}},
-	}
-	_, _, err = sq.Exec(db, sq.SQLite.
-		InsertInto(u).
-		Valuesx(func(col *sq.Column) error {
-			var b []byte
-			for _, user := range users {
-				col.SetInt64(u.USER_ID, user.userid)
-				col.SetString(u.PUBLIC_USER_ID, user.publicid)
-				col.SetString(u.LOGIN_ID, user.username)
-				b, err = json.Marshal(user.roles)
-				if err != nil {
-					return erro.Wrap(err)
-				}
-				col.Set(u.ROLES, string(b))
-			}
+			col.SetInt64(USERS.USER_ID, 1)
+			col.SetString(USERS.PUBLIC_USER_ID, "")
+			col.SetString(USERS.LOGIN_ID, "")
 			return nil
 		}),
 		sq.ErowsAffected,
@@ -291,24 +240,82 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 	if err != nil {
 		return erro.Wrap(err)
 	}
-	var groups = []struct {
-		name string
-		data map[string]interface{}
-	}{
-		{roleSuperadmin, map[string]interface{}{permissionPagePerms: PagePermsCreate | PagePermsView | PagePermsUpdate | PagePermsDelete}},
+	// pm_roles
+	ROLES := tables.NEW_ROLES(ctx, "r")
+	_, _, err = sq.Exec(db, sq.SQLite.DeleteFrom(ROLES), sq.ErowsAffected)
+	if err != nil {
+		return erro.Wrap(err)
 	}
 	_, _, err = sq.Exec(db, sq.SQLite.
-		InsertInto(ag).
+		InsertInto(ROLES).
 		Valuesx(func(col *sq.Column) error {
-			var b []byte
-			for _, group := range groups {
-				col.SetString(ag.NAME, group.name)
-				b, err = json.Marshal(group.data)
-				if err != nil {
-					return erro.Wrap(err)
-				}
-				col.Set(ag.PERMISSIONS, string(b))
-			}
+			col.SetString(ROLES.ROLE_NAME, roleSuperadmin)
+			return nil
+		}),
+		sq.ErowsAffected,
+	)
+	if err != nil {
+		return erro.Wrap(err)
+	}
+	// pm_permissions
+	PERMISSIONS := tables.NEW_PERMISSIONS(ctx, "p")
+	_, _, err = sq.Exec(db, sq.SQLite.DeleteFrom(PERMISSIONS), sq.ErowsAffected)
+	if err != nil {
+		return erro.Wrap(err)
+	}
+	_, _, err = sq.Exec(db, sq.SQLite.
+		InsertInto(PERMISSIONS).
+		Valuesx(func(col *sq.Column) error {
+			col.SetString(PERMISSIONS.PERMISSION_NAME, permissionAddPage)
+			col.SetString(PERMISSIONS.PERMISSION_NAME, permissionViewPage)
+			col.SetString(PERMISSIONS.PERMISSION_NAME, permissionChangePage)
+			col.SetString(PERMISSIONS.PERMISSION_NAME, permissionDeletePage)
+			return nil
+		}),
+		sq.ErowsAffected,
+	)
+	if err != nil {
+		return erro.Wrap(err)
+	}
+	// pm_user_roles
+	USER_ROLES := tables.NEW_USER_ROLES(ctx, "ur")
+	_, _, err = sq.Exec(db, sq.SQLite.DeleteFrom(USER_ROLES), sq.ErowsAffected)
+	if err != nil {
+		return erro.Wrap(err)
+	}
+	_, _, err = sq.Exec(db, sq.SQLite.
+		InsertInto(USER_ROLES).
+		Valuesx(func(col *sq.Column) error {
+			col.SetInt64(USER_ROLES.USER_ID, 1)
+			col.SetString(USER_ROLES.ROLE_NAME, roleSuperadmin)
+			return nil
+		}),
+		sq.ErowsAffected,
+	)
+	if err != nil {
+		return erro.Wrap(err)
+	}
+	// pm_role_permissions
+	ROLE_PERMISSIONS := tables.NEW_ROLE_PERMISSIONS(ctx, "rp")
+	_, _, err = sq.Exec(db, sq.SQLite.DeleteFrom(ROLE_PERMISSIONS), sq.ErowsAffected)
+	if err != nil {
+		return erro.Wrap(err)
+	}
+	_, _, err = sq.Exec(db, sq.SQLite.
+		InsertInto(ROLE_PERMISSIONS).
+		Valuesx(func(col *sq.Column) error {
+			// add
+			col.SetString(ROLE_PERMISSIONS.ROLE_NAME, roleSuperadmin)
+			col.SetString(ROLE_PERMISSIONS.PERMISSION_NAME, permissionAddPage)
+			// view
+			col.SetString(ROLE_PERMISSIONS.ROLE_NAME, roleSuperadmin)
+			col.SetString(ROLE_PERMISSIONS.PERMISSION_NAME, permissionViewPage)
+			// change
+			col.SetString(ROLE_PERMISSIONS.ROLE_NAME, roleSuperadmin)
+			col.SetString(ROLE_PERMISSIONS.PERMISSION_NAME, permissionChangePage)
+			// delete
+			col.SetString(ROLE_PERMISSIONS.ROLE_NAME, roleSuperadmin)
+			col.SetString(ROLE_PERMISSIONS.PERMISSION_NAME, permissionDeletePage)
 			return nil
 		}),
 		sq.ErowsAffected,
@@ -327,6 +334,7 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 		description string
 	}{
 		{"en", "English"},
+		{"de", "German"},
 	}
 	_, _, err = sq.Exec(db, sq.SQLite.
 		InsertInto(l).
@@ -360,15 +368,6 @@ func seedData(ctx context.Context, db sq.Queryer) error {
 	// }
 	return nil
 }
-
-type PagePerms int
-
-const (
-	PagePermsCreate PagePerms = 0b1
-	PagePermsView   PagePerms = 0b10
-	PagePermsUpdate PagePerms = 0b100
-	PagePermsDelete PagePerms = 0b1000
-)
 
 func getLocales(ctx context.Context, db sq.Queryer) (map[string]string, error) {
 	l := tables.NEW_LOCALES(ctx, "l")

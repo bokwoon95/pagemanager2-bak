@@ -172,7 +172,7 @@ func (pm *PageManager) createPage(w http.ResponseWriter, r *http.Request) {
 		case !user.Valid:
 			pm.RedirectToLogin(w, r)
 			return
-		case !user.HasPagePerms(PagePermsCreate):
+		case !user.HasPermission(permissionAddPage):
 			pm.Forbidden(w, r)
 			return
 		}

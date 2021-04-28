@@ -94,8 +94,6 @@ type PM_USERS struct {
 	PASSWORD_HASH  sq.StringField
 	EMAIL          sq.StringField
 	DISPLAYNAME    sq.StringField
-	PERMISSIONS    sq.JSONField
-	ROLES          sq.JSONField
 	USER_DATA      sq.JSONField
 }
 
@@ -105,6 +103,23 @@ func NEW_USERS(ctx context.Context, alias string) PM_USERS {
 		tbl.TableInfo.Name = "pm_" + tenantID + "_users"
 	} else {
 		tbl.TableInfo.Name = "pm_users"
+	}
+	_ = sq.ReflectTable(&tbl)
+	return tbl
+}
+
+type PM_ROLES struct {
+	sq.TableInfo
+	ROLE_NAME   sq.StringField `sq:"type=TEXT misc=NOT_NULL,PRIMARY_KEY"`
+	DESCRIPTION sq.StringField
+}
+
+func NEW_ROLES(ctx context.Context, alias string) PM_ROLES {
+	tbl := PM_ROLES{TableInfo: sq.TableInfo{Alias: alias}}
+	if tenantID, ok := ctx.Value(TenantIDKey{}).(string); ok && tenantID != "" {
+		tbl.TableInfo.Name = "pm_" + tenantID + "_roles"
+	} else {
+		tbl.TableInfo.Name = "pm_roles"
 	}
 	_ = sq.ReflectTable(&tbl)
 	return tbl
@@ -127,18 +142,52 @@ func NEW_PERMISSIONS(ctx context.Context, alias string) PM_PERMISSIONS {
 	return tbl
 }
 
-type PM_ROLES struct {
+type PM_USER_ROLES struct {
 	sq.TableInfo
-	NAME        sq.StringField `sq:"type=TEXT misc=NOT_NULL,PRIMARY_KEY"`
-	PERMISSIONS sq.JSONField
+	USER_ID   sq.NumberField
+	ROLE_NAME sq.StringField
 }
 
-func NEW_ROLES(ctx context.Context, alias string) PM_ROLES {
-	tbl := PM_ROLES{TableInfo: sq.TableInfo{Alias: alias}}
+func NEW_USER_ROLES(ctx context.Context, alias string) PM_USER_ROLES {
+	tbl := PM_USER_ROLES{TableInfo: sq.TableInfo{Alias: alias}}
 	if tenantID, ok := ctx.Value(TenantIDKey{}).(string); ok && tenantID != "" {
-		tbl.TableInfo.Name = "pm_" + tenantID + "_roles"
+		tbl.TableInfo.Name = "pm_" + tenantID + "_user_roles"
 	} else {
-		tbl.TableInfo.Name = "pm_roles"
+		tbl.TableInfo.Name = "pm_user_roles"
+	}
+	_ = sq.ReflectTable(&tbl)
+	return tbl
+}
+
+type PM_USER_PERMISSIONS struct {
+	sq.TableInfo
+	USER_ID         sq.NumberField
+	PERMISSION_NAME sq.StringField
+}
+
+func NEW_USER_PERMISSIONS(ctx context.Context, alias string) PM_USER_PERMISSIONS {
+	tbl := PM_USER_PERMISSIONS{TableInfo: sq.TableInfo{Alias: alias}}
+	if tenantID, ok := ctx.Value(TenantIDKey{}).(string); ok && tenantID != "" {
+		tbl.TableInfo.Name = "pm_" + tenantID + "_user_permissions"
+	} else {
+		tbl.TableInfo.Name = "pm_user_permissions"
+	}
+	_ = sq.ReflectTable(&tbl)
+	return tbl
+}
+
+type PM_ROLE_PERMISSIONS struct {
+	sq.TableInfo
+	ROLE_NAME       sq.StringField
+	PERMISSION_NAME sq.StringField
+}
+
+func NEW_ROLE_PERMISSIONS(ctx context.Context, alias string) PM_ROLE_PERMISSIONS {
+	tbl := PM_ROLE_PERMISSIONS{TableInfo: sq.TableInfo{Alias: alias}}
+	if tenantID, ok := ctx.Value(TenantIDKey{}).(string); ok && tenantID != "" {
+		tbl.TableInfo.Name = "pm_" + tenantID + "_role_permissions"
+	} else {
+		tbl.TableInfo.Name = "pm_role_permissions"
 	}
 	_ = sq.ReflectTable(&tbl)
 	return tbl
