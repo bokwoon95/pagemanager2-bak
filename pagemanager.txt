@@ -22,3 +22,20 @@ form.Unmarshal(func() {
     d.Name = name.Value()
 })
 I may have to make all the input fields public so that they may be manipulated by the convenience functions: they take in an input, and are able to inject their own classes/attributes into it
+
+<html lang="en">
+{{ block "markdown:testing" }}
+This is what [a link](https://google.com/?q=a+link) looks like in markdown.
+This is a <a href="{{ linkcode "../.." }}">link two hierarchies up</a> up
+{{ end }}
+{{ md `
+This is what [a link](https://google.com/?q=a+link) looks like in markdown.
+` }}
+</html>
+
+.
+|- index.html
+|- side/
+   |- index.inherit.html
+   |- item-1
+      |- index.inherit.html
