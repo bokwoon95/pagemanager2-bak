@@ -8,3 +8,17 @@ there is a way to make datafolder a generic fs.FS, not just a specific directory
 - In any case it is important to make the process of ($datafolder => database/sql connection) and ($datafolder => image reader/writer) into a dynamically dispatchable process. This means the parent struct will take in an interface or callback that handles the translation behind the scenes.
 - The payoff is that once all the writable components have been abstracted out, $datafolder can be a purely read-only embedded fs.FS and the entire binary can be deployed in multiple serves as a form of load balancing while still maintaining a connection to some globally shared database.
     - The themes in pm-themes will essentially be read-only, but it is a good thing. Nobody can tamper with the themes. Nbody can tamper with the plugins, because those are already compiled into the binary.
+
+pagemanager plus
+- A way of writing a hierarchical set of pages mapped 1-to-1 from filesystem to URL. Meant for sites like mozilla documentation.
+
+hyforms needs to provide convenience functions for adding default-styled form inputs so that I don't have to micromanage the classes/attributes.
+id := form.Text("id", d.ID)
+name := form.Text("name", d.Name)
+hyforms.Add(form, id, msg("your id")) // will display any errors as well
+hyforms.Add(form, name, msg("your name"))
+form.Unmarshal(func() {
+    d.ID = id.Value()
+    d.Name = name.Value()
+})
+I may have to make all the input fields public so that they may be manipulated by the convenience functions: they take in an input, and are able to inject their own classes/attributes into it
