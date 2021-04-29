@@ -39,3 +39,6 @@ This is what [a link](https://google.com/?q=a+link) looks like in markdown.
    |- index.inherit.html
    |- item-1
       |- index.inherit.html
+
+pagemanager-config.js now identifies the datafolder, not the datafolder name.
+superadmin folder is still sourced by name, because no way can we bake any reference to the superadmin folder inside the datafolder. The datafolder is supposed to be completely shareable between two parties without revealing the superadmin folder.
