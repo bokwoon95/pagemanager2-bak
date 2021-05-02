@@ -23,12 +23,12 @@ func (pm *PageManager) viewPage(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	switch r.Method {
 	case "GET":
-		user := pm.getUser(w, r)
+		user, _ := pm.getUser(w, r)
 		switch {
 		case !user.Valid:
 			pm.RedirectToLogin(w, r)
 			return
-		case !user.HasPermission(permissionViewPage):
+		case !user.Permissions[permissionViewPage]:
 			pm.Forbidden(w, r)
 			return
 		}

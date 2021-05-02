@@ -407,7 +407,7 @@ func (pm *PageManager) getPage(ctx context.Context, path string) (page Page, loc
 }
 
 func (pm *PageManager) testEncrypt(w http.ResponseWriter, r *http.Request) {
-	user := pm.getUser(w, r)
+	user, _ := pm.getUser(w, r)
 	if user.Valid {
 		fmt.Printf("testEncrypt user: %+v\n", user)
 	}

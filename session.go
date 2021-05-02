@@ -20,8 +20,6 @@ type User struct {
 	LoginID      string
 	Email        string
 	Displayname  string
-	Roles        map[string]struct{}
-	Permissions  map[string]struct{}
 	UserData     map[string]interface{}
 }
 
@@ -49,63 +47,42 @@ GROUP BY
 ;
 */
 
-func (user *User) RowMapper(u tables.PM_USERS) func(*sq.Row) error {
+func (user *User) RowMapper(USERS tables.PM_USERS) func(*sq.Row) error {
 	return func(row *sq.Row) error {
-		userID := row.NullInt64(u.USER_ID)
+		userID := row.NullInt64(USERS.USER_ID)
 		user.Valid = userID.Valid
 		user.UserID = userID.Int64
-		user.PublicUserID = row.String(u.PUBLIC_USER_ID)
-		user.LoginID = row.String(u.LOGIN_ID)
-		// TODO: pagemanager:perms
-		// rolesBytes := row.Bytes(u.ROLES)
-		// permissionsBytes := row.Bytes(u.PERMISSIONS)
+		user.PublicUserID = row.String(USERS.PUBLIC_USER_ID)
+		user.LoginID = row.String(USERS.LOGIN_ID)
+		user.Email = row.String(USERS.EMAIL)
+		user.Displayname = row.String(USERS.DISPLAYNAME)
+		b := row.Bytes(USERS.USER_DATA)
 		return row.Accumulate(func() error {
-			// var err error
-			// if len(rolesBytes) > 0 {
-			// 	err = json.Unmarshal(rolesBytes, &user.Roles)
-			// 	if err != nil {
-			// 		return erro.Wrap(err)
-			// 	}
-			// }
-			// if len(permissionsBytes) > 0 {
-			// 	err = json.Unmarshal(permissionsBytes, &user.Permissions)
-			// 	if err != nil {
-			// 		return erro.Wrap(err)
-			// 	}
-			// }
+			if len(b) > 0 {
+				return erro.Wrap(json.Unmarshal(b, &user.UserData))
+			}
 			return nil
 		})
 	}
 }
 
-func (user *User) HasPermission(permission string) bool {
-	_, ok := user.Permissions[permission]
-	return ok
-}
-
-func (user *User) HasRole(role string) bool {
-	_, ok := user.Roles[role]
-	return ok
-}
-
 type SessionUser struct {
 	User
+	Roles       map[string]bool
+	Permissions map[string]bool
 	SessionData map[string]interface{}
 }
 
 func (user *SessionUser) RowMapper(u tables.PM_USERS, s tables.PM_SESSIONS) func(*sq.Row) error {
 	return func(row *sq.Row) error {
-		rawSessionData := row.Bytes(s.SESSION_DATA)
+		b := row.Bytes(s.SESSION_DATA)
 		err := user.User.RowMapper(u)(row)
 		if err != nil {
 			return erro.Wrap(err)
 		}
 		return row.Accumulate(func() error {
-			if len(rawSessionData) > 0 {
-				err = json.Unmarshal(rawSessionData, &user.SessionData)
-				if err != nil {
-					return erro.Wrap(err)
-				}
+			if len(b) > 0 {
+				return erro.Wrap(json.Unmarshal(b, &user.SessionData))
 			}
 			return nil
 		})
@@ -184,7 +161,13 @@ func (pm *PageManager) getSession(w http.ResponseWriter, r *http.Request) (user 
 	for _, sessionHash := range sessionHashes {
 		b64SessionHashes = append(b64SessionHashes, base64.RawURLEncoding.EncodeToString(sessionHash))
 	}
-	SESSIONS, USERS := tables.NEW_SESSIONS(r.Context(), "s"), tables.NEW_USERS(r.Context(), "u")
+	var (
+		SESSIONS         = tables.NEW_SESSIONS(r.Context(), "s")
+		USERS            = tables.NEW_USERS(r.Context(), "u")
+		USER_ROLES       = tables.NEW_USER_ROLES(r.Context(), "ur")
+		USER_PERMISSIONS = tables.NEW_USER_PERMISSIONS(r.Context(), "up")
+		ROLE_PERMISSIONS = tables.NEW_ROLE_PERMISSIONS(r.Context(), "rp")
+	)
 	_, err = sq.Fetch(pm.dataDB, sq.SQLite.
 		From(SESSIONS).
 		Join(USERS, USERS.USER_ID.Eq(SESSIONS.USER_ID)).
@@ -195,55 +178,68 @@ func (pm *PageManager) getSession(w http.ResponseWriter, r *http.Request) (user 
 	if err != nil {
 		return user, erro.Wrap(err)
 	}
-	data := make(map[string]interface{})
-	if len(user.Roles) > 0 {
-		ROLES := tables.NEW_ROLES(r.Context(), "ag")
-		ord := sq.Case(ROLES.ROLE_NAME)
-		// TODO: pagemanager:perms
-		// for i, group := range user.Roles {
-		// 	ord = ord.When(group, i+1)
-		// }
-		_, err = sq.Fetch(pm.dataDB, sq.SQLite.
-			From(ROLES).
-			Where(ROLES.ROLE_NAME.In(user.Roles)).
-			OrderBy(ord),
-			func(row *sq.Row) error {
-				b := row.Bytes(ROLES.ROLE_NAME)
-				return row.Accumulate(func() error {
-					var m map[string]interface{}
-					err = json.Unmarshal(b, &m)
-					if err != nil {
-						return erro.Wrap(err)
+	user.Roles = make(map[string]bool)
+	user.Permissions = make(map[string]bool)
+	_, err = sq.Fetch(pm.dataDB, sq.SQLite.
+		From(USERS).
+		LeftJoin(USER_ROLES, USER_ROLES.USER_ID.Eq(USERS.USER_ID)).
+		LeftJoin(USER_PERMISSIONS, USER_PERMISSIONS.USER_ID.Eq(USERS.USER_ID)).
+		Join(ROLE_PERMISSIONS, ROLE_PERMISSIONS.ROLE_NAME.Eq(USER_ROLES.ROLE_NAME)).
+		Where(USERS.USER_ID.EqInt64(user.UserID)).
+		GroupBy(USERS.USER_ID),
+		func(row *sq.Row) error {
+			rolesBytes := row.Bytes(sq.Fieldf("json_group_array(?)", USER_ROLES.ROLE_NAME))
+			userPermsBytes := row.Bytes(sq.Fieldf("json_group_array(?)", USER_PERMISSIONS.PERMISSION_NAME))
+			rolePermsBytes := row.Bytes(sq.Fieldf("json_group_array(?)", ROLE_PERMISSIONS.PERMISSION_NAME))
+			return row.Accumulate(func() error {
+				var roles, userPerms, rolePerms []string
+				err := json.Unmarshal(rolesBytes, &roles)
+				if err != nil {
+					return erro.Wrap(err)
+				}
+				err = json.Unmarshal(userPermsBytes, &userPerms)
+				if err != nil {
+					return erro.Wrap(err)
+				}
+				err = json.Unmarshal(rolePermsBytes, &rolePerms)
+				if err != nil {
+					return erro.Wrap(err)
+				}
+				for _, role := range roles {
+					if role == "" {
+						continue
 					}
-					for k, v := range m {
-						data[k] = v
+					user.Roles[role] = true
+				}
+				for _, perm := range userPerms {
+					if perm == "" {
+						continue
 					}
-					return nil
-				})
-			},
-		)
-		if err != nil {
-			return user, erro.Wrap(err)
-		}
-	}
-	// TODO: pagemanager:perms
-	// for k, v := range user.Permissions {
-	// 	data[k] = v
-	// }
-	// user.Permissions = data
+					user.Permissions[perm] = true
+				}
+				for _, perm := range rolePerms {
+					if perm == "" {
+						continue
+					}
+					user.Permissions[perm] = true
+				}
+				return nil
+			})
+		},
+	)
 	return user, nil
 }
 
-func (pm *PageManager) getUser(w http.ResponseWriter, r *http.Request) SessionUser {
+func (pm *PageManager) getUser(w http.ResponseWriter, r *http.Request) (SessionUser, error) {
 	user, ok := r.Context().Value(ctxKeyUser).(SessionUser)
 	if ok {
-		return user
+		return user, nil
 	}
 	user, err := pm.getSession(w, r)
 	if err != nil {
 		user.Valid = false
 	}
-	return user
+	return user, erro.Wrap(err)
 }
 
 func (pm *PageManager) deleteSession(w http.ResponseWriter, r *http.Request) error {

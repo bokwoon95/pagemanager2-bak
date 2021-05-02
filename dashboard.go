@@ -66,18 +66,22 @@ func (pm *PageManager) dashboard(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	switch r.Method {
 	case "GET":
-		user := pm.getUser(w, r)
+		user, err := pm.getUser(w, r)
+		if err != nil {
+			pm.InternalServerError(w, r, err)
+			return
+		}
 		switch {
 		case !user.Valid:
 			_ = hyforms.SetCookieValue(w, cookieLoginRedirect, LocaleURL(r, r.URL.Path), nil)
 			pm.RedirectToLogin(w, r)
 			return
-		case !user.HasPermission(permissionViewPage):
+		case !user.Permissions[permissionViewPage]:
 			pm.Forbidden(w, r)
 			return
 		}
 		PAGES := tables.NEW_PAGES(r.Context(), "r")
-		_, err := sq.Fetch(pm.dataDB, sq.SQLite.From(PAGES).OrderBy(PAGES.URL), func(row *sq.Row) error {
+		_, err = sq.Fetch(pm.dataDB, sq.SQLite.From(PAGES).OrderBy(PAGES.URL), func(row *sq.Row) error {
 			var page Page
 			if err := page.RowMapper(PAGES)(row); err != nil {
 				return erro.Wrap(err)

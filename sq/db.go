@@ -157,6 +157,7 @@ func fetchContext(ctx context.Context, db Queryer, q Query, rowmapper func(*Row)
 	if err != nil {
 		return 0, err
 	}
+	defer r.rows.Close()
 	if len(r.dest) == 0 {
 		return 0, nil
 	}
@@ -201,7 +202,7 @@ func fetchContext(ctx context.Context, db Queryer, q Query, rowmapper func(*Row)
 	if err != nil {
 		return r.count, err
 	}
-	if r.count > 5 {
+	if logger != nil && Lresults&logflag != 0 && r.count > 5 {
 		resultsBuf.WriteString("\n...\n(" + strconv.FormatInt(r.count-5, 10) + " more rows)")
 	}
 	return r.count, nil

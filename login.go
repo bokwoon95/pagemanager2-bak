@@ -62,8 +62,8 @@ func (pm *PageManager) login(w http.ResponseWriter, r *http.Request) {
 	var err error
 	switch r.Method {
 	case "GET":
-		user := pm.getUser(w, r)
-		if user.HasRole(roleSuperadmin) {
+		user, _ := pm.getUser(w, r)
+		if user.Roles[roleSuperadmin] {
 			Redirect(w, r, URLDashboard)
 			return
 		}

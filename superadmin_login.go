@@ -33,7 +33,7 @@ func (d *superadminLoginData) loginForm(form *hyforms.Form) {
 		Input("password", "pm-password", d.Password).
 		Set("#pm-password.bg-near-white.pa2.w-100", hy.Attr{"required": hy.Enabled})
 
-	form.Set(".bg-washed-blue.center-form", hy.Attr{"method": "POST"})
+	form.Set(".bg-white.center-form", hy.Attr{"method": "POST"})
 	for _, errMsg := range form.ErrMsgs() {
 		form.Append("div.red", nil, hy.Txt(errMsg))
 	}
@@ -45,8 +45,8 @@ func (d *superadminLoginData) loginForm(form *hyforms.Form) {
 		hy.H("div.mt3.mb1", nil, hy.H("label.pointer.i", hy.Attr{"for": password.ID()}, hy.Txt("Superadmin Password:"))),
 		hy.H("div", nil, password),
 	)
-	if hyforms.ErrMsgsMatch(password.ErrMsgs(), hyforms.RequiredErrMsg) {
-		form.Append("div.f7.red", nil, hy.Txt(hyforms.RequiredErrMsg))
+	for _, errMsg := range password.ErrMsgs() {
+		form.Append("div.f7.red", nil, hy.Txt(errMsg))
 	}
 	form.Append("div.mt3", nil, hy.H("button.pointer.pa2", hy.Attr{"type": "submit"}, hy.Txt("Log In")))
 
@@ -61,8 +61,8 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 	var err error
 	switch r.Method {
 	case "GET":
-		user := pm.getUser(w, r)
-		if user.Valid && user.HasRole(roleSuperadmin) {
+		user, _ := pm.getUser(w, r)
+		if user.Valid && user.Roles[roleSuperadmin] {
 			Redirect(w, r, URLDashboard)
 			return
 		}
@@ -76,7 +76,7 @@ func (pm *PageManager) superadminLogin(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		errMsgs, ok := hyforms.UnmarshalForm(w, r, data.loginForm)
 		if !ok {
-			hyforms.Redirect(w, r, r.URL.Path, errMsgs)
+			hyforms.Redirect(w, r, LocaleURL(r, r.URL.Path), errMsgs)
 			return
 		}
 		SUPERADMIN := tables.NEW_SUPERADMIN("")

@@ -42,3 +42,33 @@ This is what [a link](https://google.com/?q=a+link) looks like in markdown.
 
 pagemanager-config.js now identifies the datafolder, not the datafolder name.
 superadmin folder is still sourced by name, because no way can we bake any reference to the superadmin folder inside the datafolder. The datafolder is supposed to be completely shareable between two parties without revealing the superadmin folder.
+
+To make directory-mapped routes work with locales, the localeCode must be inside the index.md name.
+name: Generating table types
+important: true
+(oh my god, won't walking through + parsing all child md front matter just to render the index page be bloody slow in real time? Is this why Hugo went for the purely SSG route?)
+Even if I concurrently read + processed the child md files, how would I know how to order it? How should the user specify how to order it? If I give file names a prefix, then that means file lookup from a URL just become more complicated (and slower)
+.
+├── quickstart
+├── basics
+│   │── checking-sql-errors.md
+│   │── checking-sql-errors.toml
+│   ├── main.go
+│   └── main.html
+├── column-types
+│   │── pagemanager
+│   ├── main.go
+│   └── main.html
+├── query-building
+│   │── pagemanager
+│   ├── main.go
+│   └── main.html
+├── sql-expressions
+│   │── pagemanager
+│   ├── main.go
+│   └── main.html
+├── quickstart
+└── XXX
+   │── XXX
+   ├── XXX
+   └── XXX
