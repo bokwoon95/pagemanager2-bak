@@ -211,6 +211,9 @@ func (l *Elements) AppendElements(children ...Element) {
 func (l Elements) WriteHTML(w io.Writer) error {
 	var err error
 	for _, el := range l {
+		if el == nil {
+			continue
+		}
 		err = el.WriteHTML(w)
 		if err != nil {
 			return err
@@ -333,11 +336,11 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 	}
 	if class, ok := attrs.Dict["class"]; ok {
 		delete(attrs.Dict, "class")
-		for _, cls := range strings.Split(class, " ") {
-			if cls == "" {
+		for _, c := range strings.Split(class, " ") {
+			if c == "" {
 				continue
 			}
-			attrs.Classes = append(attrs.Classes, cls)
+			attrs.Classes = append(attrs.Classes, c)
 		}
 	}
 	return attrs
@@ -402,11 +405,10 @@ func WriteAttributes(w io.Writer, attrs Attributes) {
 	}
 	var names []string
 	for name := range attrs.Dict {
-		switch name {
-		case "id", "class": // skip
-		default:
-			names = append(names, name)
+		if strings.EqualFold(name, "id") || strings.EqualFold(name, "class") {
+			continue
 		}
+		names = append(names, name)
 	}
 	sort.Strings(names)
 	var value string
@@ -440,6 +442,9 @@ func Marshal(el Element) (template.HTML, error) {
 		buf.Reset()
 		bufpool.Put(buf)
 	}()
+	if el == nil {
+		return "", nil
+	}
 	err := el.WriteHTML(buf)
 	if err != nil {
 		return "", err
