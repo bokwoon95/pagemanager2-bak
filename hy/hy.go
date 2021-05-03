@@ -93,6 +93,51 @@ func (el *HTMLElement) AppendElements(elements ...Element) {
 	el.children = append(el.children, elements...)
 }
 
+func (el *HTMLElement) AddClasses(classes ...string) {
+	el.attrs.Classes = append(el.attrs.Classes, classes...)
+}
+
+func (el *HTMLElement) RemoveClasses(classes ...string) {
+	set := make(map[string]struct{})
+	for _, class := range classes {
+		set[class] = struct{}{}
+	}
+	classes = el.attrs.Classes[:0]
+	for _, class := range el.attrs.Classes {
+		if _, ok := set[class]; ok {
+			continue
+		}
+		classes = append(classes, class)
+	}
+}
+
+func (el *HTMLElement) SetAttribute(name, value string) {
+	if strings.EqualFold(name, "id") {
+		el.attrs.ID = value
+	} else if strings.EqualFold(name, "class") {
+		classes := strings.Split(value, " ")
+		el.attrs.Classes = el.attrs.Classes[:0]
+		for _, class := range classes {
+			if class == "" {
+				continue
+			}
+			el.attrs.Classes = append(el.attrs.Classes, class)
+		}
+	} else {
+		el.attrs.Dict[name] = value
+	}
+}
+
+func (el *HTMLElement) RemoveAttribute(name string) {
+	if strings.EqualFold(name, "id") {
+		el.attrs.ID = ""
+	} else if strings.EqualFold(name, "class") {
+		el.attrs.Classes = el.attrs.Classes[:0]
+	} else {
+		delete(el.attrs.Dict, name)
+	}
+}
+
 func (el HTMLElement) Tag() string { return el.attrs.Tag }
 
 func (el HTMLElement) ID() string { return el.attrs.ID }
@@ -175,7 +220,7 @@ type Attributes struct {
 	ParseErr error
 	Tag      string
 	ID       string
-	Class    []string
+	Classes  []string
 	Dict     map[string]string
 }
 
@@ -202,7 +247,7 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 				attrs.ID = string(value)
 			case StateClass:
 				if len(value) > 0 {
-					attrs.Class = append(attrs.Class, string(value))
+					attrs.Classes = append(attrs.Classes, string(value))
 				}
 			case StateAttrName, StateAttrValue:
 				attrs.ParseErr = fmt.Errorf("unclosed attribute: position=%d char=%c selector=%s", i, c, selector)
@@ -269,7 +314,7 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 		case StateID:
 			attrs.ID = string(value)
 		case StateClass:
-			attrs.Class = append(attrs.Class, string(value))
+			attrs.Classes = append(attrs.Classes, string(value))
 		case StateNone: // do nothing i.e. drop the value
 		case StateAttrName, StateAttrValue:
 			attrs.ParseErr = fmt.Errorf("unclosed attribute: selector=%s, value: %s", selector, string(value))
@@ -287,7 +332,7 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 			if cls == "" {
 				continue
 			}
-			attrs.Class = append(attrs.Class, cls)
+			attrs.Classes = append(attrs.Classes, cls)
 		}
 	}
 	return attrs
@@ -315,6 +360,9 @@ func WriteHTML(w io.Writer, attrs Attributes, children ...Element) error {
 			bufpool.Put(buf)
 		}()
 		for _, child := range children {
+			if child == nil {
+				continue
+			}
 			err = child.WriteHTML(buf)
 			if err != nil {
 				return err
@@ -323,6 +371,9 @@ func WriteHTML(w io.Writer, attrs Attributes, children ...Element) error {
 		io.WriteString(w, cssEscaper(buf.String()))
 	} else {
 		for _, child := range children {
+			if child == nil {
+				continue
+			}
 			err = child.WriteHTML(w)
 			if err != nil {
 				return err
@@ -337,11 +388,11 @@ func WriteAttributes(w io.Writer, attrs Attributes) {
 	if attrs.ID != "" {
 		io.WriteString(w, ` id="`)
 		io.WriteString(w, attrEscaper(attrs.ID))
-		io.WriteString(w, ` "`)
+		io.WriteString(w, `"`)
 	}
-	if len(attrs.Class) > 0 {
+	if len(attrs.Classes) > 0 {
 		io.WriteString(w, ` class="`)
-		io.WriteString(w, attrEscaper(strings.Join(attrs.Class, " ")))
+		io.WriteString(w, attrEscaper(strings.Join(attrs.Classes, " ")))
 		io.WriteString(w, `"`)
 	}
 	var names []string

@@ -38,7 +38,7 @@ func Test_ParseAttributes(t *testing.T) {
 		assertOK(t, selector, map[string]string{}, Attributes{
 			Tag:   "p",
 			ID:    "id2",
-			Class: []string{"class1", "class2", "class3"},
+			Classes: []string{"class1", "class2", "class3"},
 			Dict: map[string]string{
 				"attr1": "val1",
 				"attr2": "val2",
@@ -60,7 +60,7 @@ func Test_ParseAttributes(t *testing.T) {
 		assertOK(t, selector, attributes, Attributes{
 			Tag:   "p",
 			ID:    "id3",
-			Class: []string{"class1", "class2", "class3", "class4", "class5", "class6"},
+			Classes: []string{"class1", "class2", "class3", "class4", "class5", "class6"},
 			Dict: map[string]string{
 				"attr1": "value-1",
 				"attr2": "value-2",

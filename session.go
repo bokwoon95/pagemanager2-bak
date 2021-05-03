@@ -23,30 +23,6 @@ type User struct {
 	UserData     map[string]interface{}
 }
 
-/*
-SELECT
-    u.user_id
-    ,u.public_user_id
-    ,u.login_id
-    ,u.email
-    ,u.displayname
-    ,json_group_array(ur.role_name) AS roles
-    ,json_group_array(up.permission_name) AS permissions
-    ,json_group_array(rp.permission_name) AS role_permissions
-FROM
-    pm_users AS u
-    LEFT JOIN pm_user_permissions AS up ON up.user_id = u.user_id
-    LEFT JOIN pm_user_roles AS ur ON ur.user_id = u.user_id
-    JOIN pm_role_permissions AS rp ON rp.role_name = ur.role_name
-GROUP BY
-    u.user_id
-    ,u.public_user_id
-    ,u.login_id
-    ,u.email
-    ,u.displayname
-;
-*/
-
 func (user *User) RowMapper(USERS tables.PM_USERS) func(*sq.Row) error {
 	return func(row *sq.Row) error {
 		userID := row.NullInt64(USERS.USER_ID)
