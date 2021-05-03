@@ -72,3 +72,7 @@ Even if I concurrently read + processed the child md files, how would I know how
    │── XXX
    ├── XXX
    └── XXX
+
+A dashboard where you can run some query, load the results into memory, make modifications to those results and send it back to the database.
+This requires some kind of generic row-diffing procedure that can diff the user-modified results and the actual results in the database and formulate the necessary UPDATE query for it.
+Oh my god that's exactly what an ORM is.

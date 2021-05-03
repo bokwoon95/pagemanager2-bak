@@ -98,17 +98,18 @@ func (el *HTMLElement) AddClasses(classes ...string) {
 }
 
 func (el *HTMLElement) RemoveClasses(classes ...string) {
-	set := make(map[string]struct{})
+	excluded := make(map[string]struct{})
 	for _, class := range classes {
-		set[class] = struct{}{}
+		excluded[class] = struct{}{}
 	}
 	classes = el.attrs.Classes[:0]
 	for _, class := range el.attrs.Classes {
-		if _, ok := set[class]; ok {
+		if _, ok := excluded[class]; ok {
 			continue
 		}
 		classes = append(classes, class)
 	}
+	el.attrs.Classes = el.attrs.Classes[:len(classes)]
 }
 
 func (el *HTMLElement) SetAttribute(name, value string) {
@@ -124,6 +125,9 @@ func (el *HTMLElement) SetAttribute(name, value string) {
 			el.attrs.Classes = append(el.attrs.Classes, class)
 		}
 	} else {
+		if el.attrs.Dict == nil {
+			el.attrs.Dict = make(map[string]string)
+		}
 		el.attrs.Dict[name] = value
 	}
 }
@@ -164,6 +168,7 @@ func UnsafeTxt(a ...interface{}) Element {
 }
 
 func (txt textValue) WriteHTML(w io.Writer) error {
+	last := len(txt.values) - 1
 	for i, value := range txt.values {
 		switch value := value.(type) {
 		case string:
@@ -179,7 +184,7 @@ func (txt textValue) WriteHTML(w io.Writer) error {
 				continue
 			}
 			r, _ := utf8.DecodeLastRuneInString(value)
-			if i != len(txt.values)-1 && !unicode.IsSpace(r) {
+			if i != last && !unicode.IsSpace(r) {
 				io.WriteString(w, " ")
 			}
 		default:

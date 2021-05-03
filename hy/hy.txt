@@ -17,6 +17,14 @@ var funcMap = template.FuncMap{
 	"_eval_args_":                    evalArgs,
 }
 
+m('div', {class: [ctrl.invalid()?'invalid':'', ctrl.focused()?'focused':''].join(' ')})
+div := hy.H("div", nil)
+if ctrl.invalid() {
+    div.AddClasses("invalid")
+} else {
+    div.AddClasses("focused")
+}
+
 attrEscaper            : attribute values ✓
 commentEscaper         : <not needed>
 cssEscaper             : used for attributes or tags matching 'style' ✓

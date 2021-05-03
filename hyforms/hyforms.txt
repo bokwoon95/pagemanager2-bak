@@ -1,0 +1,55 @@
+map[string]Input
+GenericInput
+SelectInput
+TextareaInput
+ToggledInput
+
+ErrMsgs() []string
+Name() string
+DefaultValue() string
+Validate(validators ...Validator)
+Value() string
+Checked() bool
+
+SelectInput/ToggledInputs:
+Values() []string
+
+{
+  "productId": 1,
+  "productName": "A green door",
+  "price": 12.50,
+  "tags": [ "home", "green" ]
+}
+
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/product.schema.json",
+  "title": "Product",
+  "description": "A product from Acme's catalog",
+  "type": "object",
+  "properties": {
+    "productId": {
+      "description": "The unique identifier for a product",
+      "type": "integer"
+    },
+    "productName": {
+      "description": "Name of the product",
+      "type": "string"
+    },
+    "price": {
+      "description": "The price of the product",
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "tags": {
+      "description": "Tags for the product",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  },
+  "required": [ "productId", "productName", "price" ]
+}
