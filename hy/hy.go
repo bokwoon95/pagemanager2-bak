@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"io"
 	"reflect"
 	"sort"
 	"strconv"
@@ -14,8 +13,6 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
-
-	"github.com/microcosm-cc/bluemonday"
 )
 
 const (
@@ -23,7 +20,9 @@ const (
 	Disabled = "\x01"
 )
 
-type Element interface{ WriteHTML(*bytes.Buffer) error }
+type Element interface {
+	WriteHTML(buf *bytes.Buffer, allow func(tag, attrName, attrValue string) bool) error
+}
 
 // https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
 var singletonElements = map[string]struct{}{
@@ -32,41 +31,6 @@ var singletonElements = map[string]struct{}{
 }
 
 var bufpool = sync.Pool{New: func() interface{} { return &bytes.Buffer{} }}
-
-var defaultTags = []string{
-	"form", "input", "button", "label", "select", "option", "optgroup", "pre", "a", "fieldset", "legend", "textarea",
-}
-
-var attributesMap = map[string][]string{
-	"form": {"accept-charset", "autocomplete", "name", "rel", "action", "enctype", "method", "novalidate", "target"},
-	"input": {
-		"accept", "alt", "autocomplete", "autofocus", "capture", "checked", "dirname", "disabled", "form",
-		"formaction", "formenctype", "formmethod", "formnovalidate", "formtarget", "height", "list", "max",
-		"maxlength", "min", "minlength", "multiple", "name", "pattern", "placeholder", "readonly", "required",
-		"size", "src", "step", "type", "value", "width",
-	},
-	"button": {
-		"autofocus", "disabled", "form", "formaction", "formenctype",
-		"formmethod", "formnovalidate", "formtarget", "name", "type", "value",
-	},
-	"label":    {"for"},
-	"select":   {"autocomplete", "autofocus", "disabled", "form", "multiple", "name", "required", "size"},
-	"option":   {"disabled", "label", "selected", "value"},
-	"optgroup": {"label", "disabled"},
-	"link": {
-		"as", "crossorigin", "disabled", "href", "hreflang", "imagesizes", "imagesrcset", "media", "rel",
-		"sizes", "title", "type",
-	},
-	"script":   {"async", "crossorigin", "defer", "integrity", "nomodule", "nonce", "referrerpolicy", "src", "type"},
-	"pre":      {},
-	"a":        {"href", "hreflang", "ping", "rel", "target", "type"},
-	"fieldset": {"disabled", "form", "name"},
-	"legend":   {},
-	"textarea": {
-		"autocomplete", "autofocus", "cols", "disabled", "form", "maxlength", "name",
-		"placeholder", "readonly", "required", "rows", "spellcheck", "wrap",
-	},
-}
 
 type HTMLElement struct {
 	attrs    Attributes
@@ -146,8 +110,8 @@ func (el HTMLElement) Tag() string { return el.attrs.Tag }
 
 func (el HTMLElement) ID() string { return el.attrs.ID }
 
-func (el HTMLElement) WriteHTML(w io.Writer) error {
-	err := WriteHTML(w, el.attrs, el.children...)
+func (el HTMLElement) WriteHTML(buf *bytes.Buffer, allow func(tag, attrName, attrValue string) bool) error {
+	err := WriteHTML(buf, el.attrs, el.children, allow)
 	if err != nil {
 		return err
 	}
@@ -167,7 +131,7 @@ func UnsafeTxt(a ...interface{}) Element {
 	return textValue{values: a, unsafe: true}
 }
 
-func (txt textValue) WriteHTML(w io.Writer) error {
+func (txt textValue) WriteHTML(buf *bytes.Buffer, allow func(tag, attrName, attrValue string) bool) error {
 	last := len(txt.values) - 1
 	for i, value := range txt.values {
 		switch value := value.(type) {
@@ -176,22 +140,22 @@ func (txt textValue) WriteHTML(w io.Writer) error {
 				continue
 			}
 			if txt.unsafe {
-				io.WriteString(w, value)
+				buf.WriteString(value)
 			} else {
-				io.WriteString(w, htmlEscaper(value))
+				escapeRunes(buf, htmlReplacementTableV2, value)
 			}
 			if strings.TrimSpace(value) == "" {
 				continue
 			}
 			r, _ := utf8.DecodeLastRuneInString(value)
 			if i != last && !unicode.IsSpace(r) {
-				io.WriteString(w, " ")
+				buf.WriteByte(' ')
 			}
 		default:
 			if txt.unsafe {
-				io.WriteString(w, Stringify(value))
+				buf.WriteString(Stringify(value))
 			} else {
-				io.WriteString(w, htmlEscaper(Stringify(value)))
+				escapeRunes(buf, htmlReplacementTableV2, Stringify(value))
 			}
 		}
 	}
@@ -208,13 +172,13 @@ func (l *Elements) AppendElements(children ...Element) {
 	*l = append(*l, children...)
 }
 
-func (l Elements) WriteHTML(w io.Writer) error {
+func (l Elements) WriteHTML(buf *bytes.Buffer, allow func(tag, attrName, attrValue string) bool) error {
 	var err error
 	for _, el := range l {
 		if el == nil {
 			continue
 		}
-		err = el.WriteHTML(w)
+		err = el.WriteHTML(buf, allow)
 		if err != nil {
 			return err
 		}
@@ -346,7 +310,10 @@ func ParseAttributes(selector string, attributes map[string]string) Attributes {
 	return attrs
 }
 
-func WriteHTML(w io.Writer, attrs Attributes, children ...Element) error {
+func WriteHTML(buf *bytes.Buffer, attrs Attributes, children []Element, allow func(tag, attrName, attrValue string) bool) error {
+	if allow == nil {
+		allow = Allow
+	}
 	var err error
 	if attrs.ParseErr != nil {
 		return attrs.ParseErr
@@ -354,54 +321,41 @@ func WriteHTML(w io.Writer, attrs Attributes, children ...Element) error {
 	if attrs.Tag == "" {
 		attrs.Tag = "div"
 	}
-	escapedTag := htmlNospaceEscaper(attrs.Tag)
-	io.WriteString(w, `<`+escapedTag)
-	WriteAttributes(w, attrs)
-	io.WriteString(w, `>`)
+	if !allow(attrs.Tag, "", "") {
+		return nil
+	}
+	buf.WriteString(`<` + attrs.Tag)
+	WriteAttributes(buf, attrs, allow)
+	buf.WriteString(`>`)
 	if _, ok := singletonElements[strings.ToLower(attrs.Tag)]; ok {
 		return nil
 	}
-	if escapedTag == "style" {
-		buf := bufpool.Get().(*bytes.Buffer)
-		defer func() {
-			buf.Reset()
-			bufpool.Put(buf)
-		}()
-		for _, child := range children {
-			if child == nil {
-				continue
-			}
-			err = child.WriteHTML(buf)
-			if err != nil {
-				return err
-			}
+	for _, child := range children {
+		if child == nil {
+			continue
 		}
-		io.WriteString(w, cssEscaper(buf.String()))
-	} else {
-		for _, child := range children {
-			if child == nil {
-				continue
-			}
-			err = child.WriteHTML(w)
-			if err != nil {
-				return err
-			}
+		err = child.WriteHTML(buf, allow)
+		if err != nil {
+			return err
 		}
 	}
-	io.WriteString(w, `</`+escapedTag+`>`)
+	buf.WriteString(`</` + attrs.Tag + `>`)
 	return nil
 }
 
-func WriteAttributes(w io.Writer, attrs Attributes) {
+func WriteAttributes(buf *bytes.Buffer, attrs Attributes, allow func(tag, attrName, attrValue string) bool) {
+	if allow == nil {
+		allow = Allow
+	}
 	if attrs.ID != "" {
-		io.WriteString(w, ` id="`)
-		io.WriteString(w, attrEscaper(attrs.ID))
-		io.WriteString(w, `"`)
+		buf.WriteString(` id="`)
+		escapeRunes(buf, htmlAttrReplacementTable, attrs.ID)
+		buf.WriteString(`"`)
 	}
 	if len(attrs.Classes) > 0 {
-		io.WriteString(w, ` class="`)
-		io.WriteString(w, attrEscaper(strings.Join(attrs.Classes, " ")))
-		io.WriteString(w, `"`)
+		buf.WriteString(` class="`)
+		escapeRunes(buf, htmlAttrReplacementTable, strings.Join(attrs.Classes, " "))
+		buf.WriteString(`"`)
 	}
 	var names []string
 	for name := range attrs.Dict {
@@ -417,26 +371,34 @@ func WriteAttributes(w io.Writer, attrs Attributes) {
 		if name == "" || value == Disabled {
 			continue
 		}
-		io.WriteString(w, ` `)
-		io.WriteString(w, htmlNospaceEscaper(name))
+		if !allow(attrs.Tag, name, value) {
+			continue
+		}
+		buf.WriteString(` `)
+		escapeRunes(buf, htmlAttrReplacementTable, name)
 		if value == Enabled {
 			continue
 		}
-		io.WriteString(w, `="`)
-		if strings.EqualFold(name, "style") {
-			io.WriteString(w, cssEscaper(value))
+		buf.WriteString(`="`)
+		if isURLAttr(name) {
+			escapeURL(buf, value)
 		} else if strings.EqualFold(name, "srcset") {
-			io.WriteString(w, srcsetFilterAndEscaper(value))
-		} else if t := attrType(name); t == contentTypeURL {
-			io.WriteString(w, urlFilter(value))
+			escapeSrcset(buf, value)
 		} else {
-			io.WriteString(w, attrEscaper(value))
+			escapeRunes(buf, htmlAttrReplacementTable, value)
 		}
-		io.WriteString(w, `"`)
+		buf.WriteString(`"`)
 	}
 }
 
 func Marshal(el Element) (template.HTML, error) {
+	return CustomMarshal(el, Allow)
+}
+
+func CustomMarshal(el Element, allow func(tag, attrName, attrValue string) bool) (template.HTML, error) {
+	if allow == nil {
+		allow = Allow
+	}
 	buf := bufpool.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
@@ -445,7 +407,7 @@ func Marshal(el Element) (template.HTML, error) {
 	if el == nil {
 		return "", nil
 	}
-	err := el.WriteHTML(buf)
+	err := el.WriteHTML(buf, allow)
 	if err != nil {
 		return "", err
 	}
@@ -509,18 +471,4 @@ func Stringify(v interface{}) string {
 		return "[function]"
 	}
 	return fmt.Sprint(v)
-}
-
-func NewSanitizer(allowedTags ...string) *bluemonday.Policy {
-	p := bluemonday.UGCPolicy()
-	p.AllowStyling()
-	p.AllowImages()
-	p.AllowLists()
-	p.AllowTables()
-	p.AllowAttrs("inputmode", "hidden").Globally()
-	defer p.RequireNoFollowOnLinks(false) // deferred til the last because bluemonday looooves to turn it back on
-	for _, tag := range allowedTags {
-		p.AllowAttrs(attributesMap[tag]...).OnElements(tag)
-	}
-	return p
 }
