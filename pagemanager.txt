@@ -76,3 +76,17 @@ Even if I concurrently read + processed the child md files, how would I know how
 A dashboard where you can run some query, load the results into memory, make modifications to those results and send it back to the database.
 This requires some kind of generic row-diffing procedure that can diff the user-modified results and the actual results in the database and formulate the necessary UPDATE query for it.
 Oh my god that's exactly what an ORM is.
+
+something like bearblog.dev
+users can sign up and obtain a their own subdomain on pagemanager.org
+Why sign up with pagemanager instead of hosting your own static site? You get:
+- RSS reader
+- An account to make comments with
+
+migrate tables package into pagemanager
+
+add "directory" as a page type
+
+add "exact_match" as a table column to pm_pages
+
+*sql.DB connection access should be gated behind a call to context. This allows pagemanager to transparently interact with multiple sqlite databases.

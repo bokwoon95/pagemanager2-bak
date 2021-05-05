@@ -110,6 +110,7 @@ func (r *Row) ScanInto(dest interface{}, field Field) {
 		nulltime := r.dest[r.index].(*sql.NullTime)
 		*ptr = *nulltime
 	default:
+		// TODO: I think I can use reflection to avoid linear re-scanning
 		var nothing interface{}
 		if len(r.tmpdest) != len(r.dest) {
 			r.tmpdest = make([]interface{}, len(r.dest))

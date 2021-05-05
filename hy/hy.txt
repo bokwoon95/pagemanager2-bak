@@ -25,6 +25,59 @@ if ctrl.invalid() {
     div.AddClasses("focused")
 }
 
+== 0) Deny all - do not insert untrusted data in the following locations: ==
+- inside <script>
+- inside <style>
+- as an attribute name
+- as a tag name
+This is pretty much impossible because the library cannot differentiate between trusted and untrusted data. The best we can do is to enforce a tag and attribute whitelist. The whitelist by default excludes:
+- <style>
+- <script>
+- style attributes
+- <form>
+- <input>
+- <select>
+- <button>
+- <link>
+hyforms on the other hand will inject its own whitelist that allows all form-related tags.
+== 1) HTML-encode untrusted data in HTML Element content ==
+& --> &amp;
+< --> &lt;
+> --> &gt;
+" --> &quot;
+' --> &#x27;
+== 2) Attribute-encode untrusted data in HTML attributes ==
+" --> &#x22;
+' --> &#x27;
+Except for alphanumeric characters, all other characters should be HTML Entity encoded &#xHH.
+- Do not allow style attributes or javascript event handler attributes (but a developer can override that)
+- href/src attributes are unavoidable, and should be screened carefully
+- There are a bunch of other attributes that are considered unsafe (see below), screen them carefully
+== 3) JavaScript-encode untrusted data in <script> tags ==
+This is pretty much impossible because the library cannot differentiate between a string written by the developer and a string modified by a user. By default <script> tags are disallowed, if a developer overrides that they have to bear the burden of ensuring the javascript being passed in is safe.
+== 4) CSS-encode untrusted data in <style> tags and style attributes ==
+This is pretty much impossible because the library cannot differentiate between a string written by the developer and a string modified by a user. By default <style> tags and style attributes are disabled, if a developer overrides that they have to bear the burden of ensuring that the css being passed in is safe.
+== 5) URL-encode untrusted data in URL-type attributes ==
+- All ASCII values less than 256 should be encoded in the %HH encoding format (except for alphanumeric characters).
+- Do not allow 'data:*' attribute values (but a developer can override that)
+- all attri [[[TODO]]]
+== 6) Used existing HTML sanitization libraries ==
+We can't do this because we are the sanitization library. If a user is not satisfied he can always pass the resultant string into another sanitization library (e.g. bluemonday) in order to be safe (but comes with a performance hit, of course).
+== 7) Avoid javascript: URLS ==
+easily done.
+== 8) Prevent DOM-based XSS ==
+not relevant as we are not dealing with writing HTML in JavaScript
+== Bonus 1) Use HTTPOnly cookie flag ==
+up to the user.
+== Bonus 2) Use CSP ==
+up to the user.
+== Bonus 3) Use a auto-escaping template library ==
+we are the auto-escaping template library
+== Bonus 4) Use modern JS frameworks ==
+not relevant
+
+func filter(tag string, attributeName string, attributeValue string) bool
+
 attrEscaper            : attribute values ✓
 commentEscaper         : <not needed>
 cssEscaper             : used for attributes or tags matching 'style' ✓
