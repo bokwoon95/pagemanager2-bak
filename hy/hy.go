@@ -23,7 +23,7 @@ const (
 	Disabled = "\x01"
 )
 
-type Element interface{ WriteHTML(io.Writer) error }
+type Element interface{ WriteHTML(*bytes.Buffer) error }
 
 // https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
 var singletonElements = map[string]struct{}{
