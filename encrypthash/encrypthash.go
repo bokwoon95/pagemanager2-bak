@@ -13,6 +13,8 @@ import (
 	"golang.org/x/crypto/nacl/secretbox"
 )
 
+const nonceSize = 24
+
 type Box struct {
 	key        []byte
 	getKeys    func() (keys [][]byte, err error)
@@ -41,7 +43,6 @@ func NewRotatingKeys(getKeys func() (keys [][]byte, err error), processKey func(
 }
 
 func (box Box) Encrypt(plaintext []byte) (ciphertext []byte, err error) {
-	const nonceSize = 24
 	var key []byte
 	if box.getKeys != nil {
 		var keys [][]byte
@@ -77,7 +78,6 @@ func (box Box) Encrypt(plaintext []byte) (ciphertext []byte, err error) {
 }
 
 func (box Box) Decrypt(ciphertext []byte) (plaintext []byte, err error) {
-	const nonceSize = 24
 	var keys [][]byte
 	if box.getKeys != nil {
 		keys, err = box.getKeys()
